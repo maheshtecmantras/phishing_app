@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+<item android:title="Home"
+    android:id="@+id/home"
+    android:icon="@drawable/home"/>
+<!--<item android:title="Search"-->
+<!--    android:id="@+id/search"-->
+<!--    android:icon="@drawable/search"/>-->
+<item android:title="History"
+    android:id="@+id/history"
+    android:icon="@drawable/history"/>
+<item android:title="Heart"
+    android:id="@+id/heart"
+    android:icon="@drawable/heart"/>
+<item android:title="Notification"
+    android:id="@+id/notification"
+    android:icon="@drawable/notification"/>
+</menu>

