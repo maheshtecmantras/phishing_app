@@ -110,22 +110,26 @@ class NotificationService : NotificationListenerService() {
                 getWhatsappNotification()
             }
             else{
-            if(packageName == "com.skype.raider"){
-                if(title != null && title.toString().toLowerCase().contains("new conversation")){
-                    Log.d("Skype New Conversation", "title: $title text: $text  $packageName")
+                if(packageName == "com.skype.raider"){
+                    if(title != null && title.toString().toLowerCase().contains("new conversation")){
+                        Log.d("Skype New Conversation", "title: $title text: $text  $packageName")
+                    }
+                    else{
+                        addNotification(title.toString(),text.toString(),packageName,type,"",triggerTime)
+                    }
                 }
                 else{
                     addNotification(title.toString(),text.toString(),packageName,type,"",triggerTime)
                 }
+                getNotificationList()
+                getWhatsappNotification()
+                getSkypeNotification()
+                getViberNotification()
+                getFacebookNotification()
+                getTinderNotification()
+                getKikNotification()
+                getLineNotification()
             }
-            else{
-                addNotification(title.toString(),text.toString(),packageName,type,"",triggerTime)
-            }
-            getNotificationList()
-            getWhatsappNotification()
-            getSkypeNotification()
-            getViberNotification()
-        }
         }
 
 
@@ -229,6 +233,156 @@ class NotificationService : NotificationListenerService() {
             Log.d("EmailNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.subject + ", Detail = " + model.content + ", ToEmail = " + model.toEmail + ", FromEmail = " + model.fromEmail)
         }
     }
+
+    private fun getLineNotification() {
+        val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val preferences = getSharedPreferences("login", MODE_PRIVATE)
+        val name = preferences.getString("name", "")
+        val token: String = sharedPreferences.getString("token", "").toString()
+        val notificationList = sqliteHelper.getNotification("jp.naver.line.android")
+        Log.d("Line List", notificationList.size.toString())
+        val dataList = ArrayList<ApiNotificationModel>()
+        val id = ArrayList<Int>()
+        for (item in notificationList) {
+            id.add(item.id)
+            // body of loop
+            dataList.add(
+                ApiNotificationModel(
+                    item.title,
+                    name.toString(),
+                    item.detail,
+                    item.messageType,
+                    item.messageLogTime,
+                    item.contactNumber
+                )
+            )
+        }
+        if(dataList.isNotEmpty()){
+            var baseUrl = getString(R.string.api)
+
+            apiCall.callLineApi(baseUrl,dataList,token,applicationContext,id,sqliteHelper)
+        }
+        for (notification in notificationList.indices) {
+            val model: NotificationModel =
+                notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
+
+            Log.d("LineNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail)
+        }
+    }
+    private fun getKikNotification() {
+        val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val preferences = getSharedPreferences("login", MODE_PRIVATE)
+        val name = preferences.getString("name", "")
+        val token: String = sharedPreferences.getString("token", "").toString()
+        val notificationList = sqliteHelper.getNotification("kik.android")
+        Log.d("Kik List", notificationList.size.toString())
+        val dataList = ArrayList<ApiNotificationModel>()
+        val id = ArrayList<Int>()
+        for (item in notificationList) {
+            id.add(item.id)
+            // body of loop
+            dataList.add(
+                ApiNotificationModel(
+                    item.title,
+                    name.toString(),
+                    item.detail,
+                    item.messageType,
+                    item.messageLogTime,
+                    item.contactNumber
+                )
+            )
+        }
+        if(dataList.isNotEmpty()){
+            var baseUrl = getString(R.string.api)
+
+            apiCall.callKikApi(baseUrl,dataList,token,applicationContext,id,sqliteHelper)
+        }
+        for (notification in notificationList.indices) {
+            val model: NotificationModel =
+                notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
+
+            Log.d("KikNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail)
+        }
+    }
+    private fun getTinderNotification() {
+        val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val preferences = getSharedPreferences("login", MODE_PRIVATE)
+        val name = preferences.getString("name", "")
+        val token: String = sharedPreferences.getString("token", "").toString()
+        val notificationList = sqliteHelper.getNotification("com.tinder")
+        Log.d("Tinder List", notificationList.size.toString())
+        val dataList = ArrayList<ApiNotificationModel>()
+        val id = ArrayList<Int>()
+        for (item in notificationList) {
+            id.add(item.id)
+            // body of loop
+            dataList.add(
+                ApiNotificationModel(
+                    item.title,
+                    name.toString(),
+                    item.detail,
+                    item.messageType,
+                    item.messageLogTime,
+                    item.contactNumber
+                )
+            )
+        }
+        if(dataList.isNotEmpty()){
+            var baseUrl = getString(R.string.api)
+
+            apiCall.callTinderApi(baseUrl,dataList,token,applicationContext,id,sqliteHelper)
+        }
+        for (notification in notificationList.indices) {
+            val model: NotificationModel =
+                notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
+
+            Log.d("TinderNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail)
+        }
+    }
+    private fun getFacebookNotification() {
+        val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val preferences = getSharedPreferences("login", MODE_PRIVATE)
+        val name = preferences.getString("name", "")
+        val token: String = sharedPreferences.getString("token", "").toString()
+        val notificationList = sqliteHelper.getNotification("com.facebook.katana")
+        Log.d("Facebook List", notificationList.size.toString())
+        val dataList = ArrayList<ApiNotificationModel>()
+        val id = ArrayList<Int>()
+        for (item in notificationList) {
+            id.add(item.id)
+            // body of loop
+            dataList.add(
+                ApiNotificationModel(
+                    item.title,
+                    name.toString(),
+                    item.detail,
+                    item.messageType,
+                    item.messageLogTime,
+                    item.contactNumber
+                )
+            )
+        }
+        if(dataList.isNotEmpty()){
+            var baseUrl = getString(R.string.api)
+
+            apiCall.callFacebookApi(baseUrl,dataList,token,applicationContext,id,sqliteHelper)
+        }
+        for (notification in notificationList.indices) {
+            val model: NotificationModel =
+                notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
+
+            Log.d("FacebookNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail)
+        }
+    }
+
     private fun getViberNotification() {
         val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
             AppCompatActivity.MODE_PRIVATE

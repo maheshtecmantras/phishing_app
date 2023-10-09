@@ -532,7 +532,7 @@ class ApiCall{
         val url = "$baseUrl/api/Viber/AddRangeAsync"
         ApiCallManager.appendLog("===================")
         ApiCallManager.appendLog("Call Viber API url => $url")
-        Log.d("Call Skype","Call Viber API url => $url")
+        Log.d("Call Viber","Call Viber API url => $url")
         ApiCallManager.appendLog("===================")
         val req = object : StringRequest(
             Method.POST, url,
@@ -545,6 +545,208 @@ class ApiCall{
             Response.ErrorListener { error ->
                 VolleyLog.d("callViberApi Error", "Error: " + error.message)
                 ApiCallManager.appendLog("Call Viber Api API Call failed: ${error.message ?: "Unknown"}")
+            }) {
+
+            @Throws(AuthFailureError::class)
+            override fun getBody(): ByteArray {
+                val jsonBody = JSONArray(Gson().toJson(dataList)).toString()
+                return jsonBody.toByteArray(charset("utf-8"))
+            }
+
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Authorization"] = "Bearer $token"
+                headers["accept"] = "*/*"
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        req.retryPolicy = DefaultRetryPolicy(
+            MY_SOCKET_TIMEOUT_MS,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+        val queue = Volley.newRequestQueue(applicationContext)
+        queue.add(req)
+    }
+
+    fun callLineApi(
+        baseUrl: String,
+        dataList: ArrayList<ApiNotificationModel>,
+        token: String,
+        applicationContext: Context,
+        id: ArrayList<Int>,
+        sqliteHelper: SQLiteHelper
+    ) {
+
+        val url = "$baseUrl/api/Line/AddRangeAsync"
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Call Line API url => $url")
+        Log.d("Call Line","Call Line API url => $url")
+        ApiCallManager.appendLog("===================")
+        val req = object : StringRequest(
+            Method.POST, url,
+            Response.Listener { response ->
+                ApiCallManager.appendLog("Call Line API Call Success")
+                ApiCallManager.appendLog("callLineApi Response : $response")
+                sqliteHelper.deleteDataById(id)
+                Log.d("callLineApi Response", response.toString())
+            },
+            Response.ErrorListener { error ->
+                VolleyLog.d("callLineApi Error", "Error: " + error.message)
+                ApiCallManager.appendLog("Call Line Api API Call failed: ${error.message ?: "Unknown"}")
+            }) {
+
+            @Throws(AuthFailureError::class)
+            override fun getBody(): ByteArray {
+                val jsonBody = JSONArray(Gson().toJson(dataList)).toString()
+                return jsonBody.toByteArray(charset("utf-8"))
+            }
+
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Authorization"] = "Bearer $token"
+                headers["accept"] = "*/*"
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        req.retryPolicy = DefaultRetryPolicy(
+            MY_SOCKET_TIMEOUT_MS,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+        val queue = Volley.newRequestQueue(applicationContext)
+        queue.add(req)
+    }
+    fun callKikApi(
+        baseUrl: String,
+        dataList: ArrayList<ApiNotificationModel>,
+        token: String,
+        applicationContext: Context,
+        id: ArrayList<Int>,
+        sqliteHelper: SQLiteHelper
+    ) {
+
+        val url = "$baseUrl/api/Kik/AddRangeAsync"
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Call Kik API url => $url")
+        Log.d("Call Kik","Call Kik API url => $url")
+        ApiCallManager.appendLog("===================")
+        val req = object : StringRequest(
+            Method.POST, url,
+            Response.Listener { response ->
+                ApiCallManager.appendLog("Call Kik API Call Success")
+                ApiCallManager.appendLog("callKikApi Response : $response")
+                sqliteHelper.deleteDataById(id)
+                Log.d("callKikApi Response", response.toString())
+            },
+            Response.ErrorListener { error ->
+                VolleyLog.d("callKikApi Error", "Error: " + error.message)
+                ApiCallManager.appendLog("Call Kik Api API Call failed: ${error.message ?: "Unknown"}")
+            }) {
+
+            @Throws(AuthFailureError::class)
+            override fun getBody(): ByteArray {
+                val jsonBody = JSONArray(Gson().toJson(dataList)).toString()
+                return jsonBody.toByteArray(charset("utf-8"))
+            }
+
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Authorization"] = "Bearer $token"
+                headers["accept"] = "*/*"
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        req.retryPolicy = DefaultRetryPolicy(
+            MY_SOCKET_TIMEOUT_MS,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+        val queue = Volley.newRequestQueue(applicationContext)
+        queue.add(req)
+    }
+    fun callTinderApi(
+        baseUrl: String,
+        dataList: ArrayList<ApiNotificationModel>,
+        token: String,
+        applicationContext: Context,
+        id: ArrayList<Int>,
+        sqliteHelper: SQLiteHelper
+    ) {
+
+        val url = "$baseUrl/api/Tinder/AddRangeAsync"
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Call Tinder API url => $url")
+        Log.d("Call Facebook","Call Tinder API url => $url")
+        ApiCallManager.appendLog("===================")
+        val req = object : StringRequest(
+            Method.POST, url,
+            Response.Listener { response ->
+                ApiCallManager.appendLog("Call Tinder API Call Success")
+                ApiCallManager.appendLog("callTinderApi Response : $response")
+                sqliteHelper.deleteDataById(id)
+                Log.d("callTinderApi Response", response.toString())
+            },
+            Response.ErrorListener { error ->
+                VolleyLog.d("callTinderApi Error", "Error: " + error.message)
+                ApiCallManager.appendLog("Call Tinder Api API Call failed: ${error.message ?: "Unknown"}")
+            }) {
+
+            @Throws(AuthFailureError::class)
+            override fun getBody(): ByteArray {
+                val jsonBody = JSONArray(Gson().toJson(dataList)).toString()
+                return jsonBody.toByteArray(charset("utf-8"))
+            }
+
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Authorization"] = "Bearer $token"
+                headers["accept"] = "*/*"
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        req.retryPolicy = DefaultRetryPolicy(
+            MY_SOCKET_TIMEOUT_MS,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+        val queue = Volley.newRequestQueue(applicationContext)
+        queue.add(req)
+    }
+
+    fun callFacebookApi(
+        baseUrl: String,
+        dataList: ArrayList<ApiNotificationModel>,
+        token: String,
+        applicationContext: Context,
+        id: ArrayList<Int>,
+        sqliteHelper: SQLiteHelper
+    ) {
+
+        val url = "$baseUrl/api/Facebook/AddRangeAsync"
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Call Facebook API url => $url")
+        Log.d("Call Facebook","Call Facebook API url => $url")
+        ApiCallManager.appendLog("===================")
+        val req = object : StringRequest(
+            Method.POST, url,
+            Response.Listener { response ->
+                ApiCallManager.appendLog("Call Facebook API Call Success")
+                ApiCallManager.appendLog("callFacebookApi Response : $response")
+                sqliteHelper.deleteDataById(id)
+                Log.d("callFacebookApi Response", response.toString())
+            },
+            Response.ErrorListener { error ->
+                VolleyLog.d("callFacebookApi Error", "Error: " + error.message)
+                ApiCallManager.appendLog("Call Facebook Api API Call failed: ${error.message ?: "Unknown"}")
             }) {
 
             @Throws(AuthFailureError::class)
