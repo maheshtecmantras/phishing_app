@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.payment.app.R
 import com.payment.app.model.ApiGmailNotificationModel
 import com.payment.app.model.ApiNotificationModel
+import com.payment.app.model.CalenderModel
 import com.payment.app.model.GmailNotificationModel
 import com.payment.app.model.NotificationModel
 import com.payment.app.sqllite.SQLiteHelper
@@ -38,6 +39,8 @@ class NotificationService : NotificationListenerService() {
         val title = sbn.notification?.extras?.getCharSequence("android.title")
         val text = sbn.notification?.extras?.getCharSequence("android.text")
         val contentText = sbn.notification?.extras?.getCharSequence("android.text")?.toString()
+        val extraText = sbn.notification?.extras?.getCharSequence("android.bigText")?.toString()
+        val subText = sbn.notification?.extras?.getCharSequence("android.subText")?.toString()
         val notificationTime = sbn.postTime
         val triggerTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LocalDateTime.ofInstant(
@@ -69,7 +72,7 @@ class NotificationService : NotificationListenerService() {
         if (!isDuplicateNotification(title.toString(), text.toString())) {
             addProcessedNotification(title.toString(), text.toString(), System.currentTimeMillis())
 //        Log.d("NotificationListener", "messageType: $messageType")
-            Log.d("NotificationListener", "title: $title text: $text  $packageName")
+            Log.d("NotificationListener", "title: $title text: $text extraText: $extraText subText:$subText $packageName")
             if (packageName == "com.google.android.gm") {
 
                 // Extract information from the Gmail notification
@@ -129,6 +132,7 @@ class NotificationService : NotificationListenerService() {
                 getTinderNotification()
                 getKikNotification()
                 getLineNotification()
+                getCalenderNotification()
             }
         }
 
@@ -234,6 +238,39 @@ class NotificationService : NotificationListenerService() {
         }
     }
 
+    private fun getCalenderNotification() {
+        val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val preferences = getSharedPreferences("login", MODE_PRIVATE)
+        val name = preferences.getString("name", "")
+        val token: String = sharedPreferences.getString("token", "").toString()
+        val notificationList = sqliteHelper.getNotification("com.google.android.calendar")
+        Log.d("Calender List", notificationList.size.toString())
+        val dataList = ArrayList<CalenderModel>()
+        val id = ArrayList<Int>()
+        for (item in notificationList) {
+            id.add(item.id)
+            // body of loop
+            dataList.add(
+                CalenderModel(
+                    item.title,
+                    item.detail,
+                )
+            )
+        }
+        if(dataList.isNotEmpty()){
+            var baseUrl = getString(R.string.api)
+
+            apiCall.callCalenderApi(baseUrl,dataList,token,applicationContext,id,sqliteHelper)
+        }
+        for (notification in notificationList.indices) {
+            val model: NotificationModel =
+                notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
+
+            Log.d("LineNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail)
+        }
+    }
     private fun getLineNotification() {
         val sharedPreferences: SharedPreferences = this.getSharedPreferences("token",
             AppCompatActivity.MODE_PRIVATE

