@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "679245624100",
+    "project_id": "tec-mantras-projcet-001",
+    "storage_bucket": "tec-mantras-projcet-001.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:679245624100:android:9cda5cea34d36664adb9b1",
+        "android_client_info": {
+          "package_name": "com.payment.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCma1OhbCWDGeQWFrjrs-CPmrc-jDKzg2Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

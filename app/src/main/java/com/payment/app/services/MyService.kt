@@ -2,7 +2,6 @@ package com.payment.app.services
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
@@ -172,7 +171,7 @@ class MyService : Service() {
             } catch (e: Exception) {
                 ApiCallManager.appendLog("Global Get All App Exception Handler: ${e.message ?: "Unknown Error"}")
             }
-        },0,15, TimeUnit.MINUTES)
+        },0,1, TimeUnit.DAYS)
 
         return START_STICKY
 
@@ -187,6 +186,17 @@ class MyService : Service() {
             AppCompatActivity.MODE_PRIVATE
         )
         val token: String = sharedPreferences.getString("token", "").toString()
+        val prefs : SharedPreferences = getSharedPreferences("isAllGetAppApiCall", MODE_PRIVATE)
+        val editor = prefs.edit()
+        val oldDate = prefs.getString("oldAllAppDate","")
+        Log.d("oldAllAppDate",oldDate.toString())
+        Log.d("oldAllAppDate",dateFormat.format(Calendar.getInstance().time).toString())
+        if(oldDate.toString() != dateFormat.format(Calendar.getInstance().time).toString()){
+            editor.putString("isAllGetAppApi","")
+            editor.apply()
+        }
+        val isAllLogApiCalls = prefs.getString("isAllGetAppApi","")
+        Log.d("oldAllAppDate",oldDate.toString() + isAllLogApiCalls.toString())
 
         val packageManager: PackageManager = packageManager
         val applications: List<ApplicationInfo> = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
@@ -216,7 +226,7 @@ class MyService : Service() {
 
             for (usageStats in usageStatsList) {
                 if (usageStats.packageName == packageName) {
-                    val appName = appInfo.loadLabel(packageManager).toString()
+//                    val appName = appInfo.loadLabel(packageManager).toString()
                     val usageStats = getUsageStats(this, packageName, startTime, endTime)
                     screenTime = usageStats
                 }
@@ -244,7 +254,9 @@ class MyService : Service() {
         }
         var baseUrl = getString(R.string.api)
         if(dataList.isNotEmpty()){
-            apiCall.getAllAppApi(dataList,token,applicationContext,baseUrl)
+            if(isAllLogApiCalls.toString() == ""){
+                apiCall.getAllAppApi(dataList,token,applicationContext,baseUrl,prefs)
+            }
         }
         if(screenTimeList.isNotEmpty()){
 //            apiCall.getScreenTimeApi(screenTimeList,token,applicationContext,baseUrl)

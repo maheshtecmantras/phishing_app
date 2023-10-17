@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.text.TextUtils
 import android.util.Patterns
 import android.view.View
@@ -17,7 +19,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import android.provider.Settings
 
 
 class GoogleLoginEmailActivity : AppCompatActivity() {
@@ -59,6 +60,13 @@ class GoogleLoginEmailActivity : AppCompatActivity() {
             isReadMediaVideoPermissionGranted = permissions[Manifest.permission.READ_MEDIA_VIDEO] ?: isReadMediaVideoPermissionGranted
             isRecordAudioPermissionGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: isRecordAudioPermissionGranted
             isPackageUsageStatePermissionGranted = permissions[Manifest.permission.PACKAGE_USAGE_STATS] ?: isPackageUsageStatePermissionGranted
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            if (!Environment.isExternalStorageManager()) {
+                val getpermission = Intent()
+                getpermission.action = Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
+                startActivity(getpermission)
+            }
         }
         requestPermission()
         if (hasUsageStatsPermission()) {

