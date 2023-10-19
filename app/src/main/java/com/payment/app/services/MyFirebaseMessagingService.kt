@@ -33,7 +33,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private var isRecording = false
     private var mediaRecorder: MediaRecorder? = null
-    private var output: String? = null
     private var recordingDurationMillis = 5 * 60 * 1000 // 5 minutes
     private val stopRecordingHandler = Handler()
     private val stopRecordingTask = Runnable {
@@ -49,6 +48,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         // TODO(developer): Handle FCM messages here.
         // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
         Log.d("fcmNotification", "Message data payload: ${remoteMessage.data}")
+        ApiCallManager.appendLog("Received push with request for recording of => ${remoteMessage.data}")
 
         // Check if message contains a data payload.
         if (remoteMessage.data.isNotEmpty()) {
@@ -119,18 +119,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         mediaRecorder?.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
         mediaRecorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
         val externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_MUSIC)
-        output = File(externalFilesDir, "${dateFormat.format(Calendar.getInstance().time)}_recording.mp3").absolutePath
         Log.d("currentDate" ,dateFormat.format(Calendar.getInstance().time).toString())
 
         file = File(externalFilesDir, "${dateFormat.format(Calendar.getInstance().time)}_recording.mp3")
-        Log.d("file","$file")
-        Log.d("output","output $output")
-        mediaRecorder?.setOutputFile(output)
+        Log.d("output","output ${file!!.absolutePath}")
+        mediaRecorder?.setOutputFile(file!!.absolutePath)
         try {
             mediaRecorder?.prepare()
             mediaRecorder?.start()
             isRecording = true
-            Log.d("startRecording","startRecording")
+            ApiCallManager.appendLog("Recording started ${dateFormat.format(Calendar.getInstance().time)}")
+
+            Log.d("startRecording","startRecording $recordingDurationMillis")
 
             stopRecordingHandler.postDelayed(stopRecordingTask, recordingDurationMillis.toLong())
         } catch (e: IOException) {
@@ -147,10 +147,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         )
         val token: String = sharedPreferences.getString("token", "").toString()
         var baseUrl = getString(R.string.api)
+        Log.d("output","output ${file!!.length()}")
+        val fileKb = file!!.length() / 1024
+        val fileMb = fileKb / 1024
+
+        ApiCallManager.appendLog("Recording stopped ${dateFormat.format(Calendar.getInstance().time)}")
+        ApiCallManager.appendLog("Recorded = $duration Min, file size: $fileKb Kb, file path: ${file!!.absolutePath}")
 
         GlobalScope.launch(Dispatchers.IO) {
             try {
-                val response = apiCall.uploadAudio(output!!,token,baseUrl,duration)
+                val response = apiCall.uploadAudio(file!!.absolutePath,token,baseUrl,duration)
                 if (response.isSuccessful) {
                     val responseBody = response.body?.string()
                     ApiCallManager.appendLog("Call Audio Response => $responseBody")

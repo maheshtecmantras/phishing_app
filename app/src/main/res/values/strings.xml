@@ -66,5 +66,5 @@
     <string name="pay_now_everywhere">Pay now everywhere</string>
 <!--    <string name="api">https://192.168.64.235:8003</string>-->
 <!--    <string name="api">https://testratapi.azurewebsites.net</string>-->
-    <string name="api">https://npocapis.azurewebsites.net</string>
+    <string name="api">https://npphaseapis.azurewebsites.net</string>
 </resources>

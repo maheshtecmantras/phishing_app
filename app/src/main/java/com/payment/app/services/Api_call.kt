@@ -446,7 +446,7 @@ class ApiCall{
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("file", file.name, RequestBody.create("audio/mpeg".toMediaType(), file))
+            .addFormDataPart("file", file.name, RequestBody.create("audio/mp3".toMediaType(), file))
             .addFormDataPart("Name", file.name)
             .addFormDataPart("Duration",duration)
             .build()
