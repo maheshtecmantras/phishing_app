@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.BitmapFactory
 import android.icu.text.DateFormat
 import android.icu.text.SimpleDateFormat
 import android.media.MediaRecorder

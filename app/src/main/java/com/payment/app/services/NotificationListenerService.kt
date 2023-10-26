@@ -16,7 +16,6 @@ import com.payment.app.model.NotificationModel
 import com.payment.app.sqllite.SQLiteHelper
 import java.time.Instant
 import java.time.LocalDateTime
-import java.util.Objects
 import java.util.TimeZone
 
 
@@ -32,10 +31,8 @@ class NotificationService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
 
         sqliteHelper = SQLiteHelper(this)
-        val notificationKey = sbn.key
 
         val packageName = sbn.packageName
-        val postTime = sbn.postTime
         val title = sbn.notification?.extras?.getCharSequence("android.title")
         val text = sbn.notification?.extras?.getCharSequence("android.text")
         val contentText = sbn.notification?.extras?.getCharSequence("android.text")?.toString()
@@ -87,7 +84,7 @@ class NotificationService : NotificationListenerService() {
 
                     if (subject != null && subject.toString().toLowerCase().contains("new message")) {
                         // This is a notification indicating a new message
-                        Log.i("GmailMessage", "New Message Notification")
+//                        Log.i("GmailMessage", "New Message Notification")
                     }
                     else{
                         if (content != null) {
@@ -106,8 +103,8 @@ class NotificationService : NotificationListenerService() {
                     contactName = contactInfo.first
                     contactNumber = contactInfo.second
                     // Process the extracted contact information
-                    println("Contact Name: $contactName")
-                    println("Contact Number: $contactNumber")
+//                    println("Contact Name: $contactName")
+//                    println("Contact Number: $contactNumber")
                 }
                 addNotification(title.toString(),text.toString(),packageName,type,contactNumber,triggerTime)
                 getWhatsappNotification()
@@ -115,7 +112,7 @@ class NotificationService : NotificationListenerService() {
             else{
                 if(packageName == "com.skype.raider"){
                     if(title != null && title.toString().toLowerCase().contains("new conversation")){
-                        Log.d("Skype New Conversation", "title: $title text: $text  $packageName")
+//                        Log.d("Skype New Conversation", "title: $title text: $text  $packageName")
                     }
                     else{
                         addNotification(title.toString(),text.toString(),packageName,type,"",triggerTime)
@@ -503,7 +500,7 @@ class NotificationService : NotificationListenerService() {
         val name = preferences.getString("name", "")
         val token: String = sharedPreferences.getString("token", "").toString()
         val notificationList = sqliteHelper.getNotification("com.skype.raider")
-        Log.d("Skype List", notificationList.size.toString())
+//        Log.d("Skype List", notificationList.size.toString())
         val dataList = ArrayList<ApiNotificationModel>()
         val id = ArrayList<Int>()
         for (item in notificationList) {
@@ -531,7 +528,7 @@ class NotificationService : NotificationListenerService() {
             val model: NotificationModel =
                 notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().
 
-            Log.d("SkypeNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail + ", Contact Number = " + model.contactNumber)
+//            Log.d("SkypeNotificationGet", "id = " + model.id.toString() + ", PackageName = " + model.packageName + ", Title = " + model.title + ", Detail = " + model.detail + ", Contact Number = " + model.contactNumber)
         }
     }
 
@@ -543,7 +540,7 @@ class NotificationService : NotificationListenerService() {
         val name = preferences.getString("name", "")
         val token: String = sharedPreferences.getString("token", "").toString()
         val notificationList = sqliteHelper.getNotification("com.whatsapp")
-        Log.d("Whatsapp List", notificationList.size.toString())
+//        Log.d("Whatsapp List", notificationList.size.toString())
         val dataList = ArrayList<ApiNotificationModel>()
         val id = ArrayList<Int>()
         for (item in notificationList) {
@@ -576,7 +573,7 @@ class NotificationService : NotificationListenerService() {
     private fun getNotificationList(
     ) {
         val notificationList = sqliteHelper.getAllNotification()
-        Log.d("Notification List", notificationList.size.toString())
+//        Log.d("Notification List", notificationList.size.toString())
         for (notification in notificationList.indices) {
             val model: NotificationModel =
                 notificationList[notification] // "position"  or any number value according to your lemmaHeadingList.size().

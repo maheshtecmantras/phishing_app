@@ -45,7 +45,6 @@ import com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.messaging.FirebaseMessaging
-import com.payment.app.services.ApiCall
 import com.payment.app.services.MyService
 import okhttp3.Interceptor.*
 import org.json.JSONObject
@@ -71,8 +70,6 @@ class HomeActivity : AppCompatActivity() {
     private var stringLongitude = "0.0"
     private var fusedLocationProviderClient: FusedLocationProviderClient? = null
     private var fcmToken = ""
-    val apiCall = ApiCall()
-
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,7 +125,6 @@ class HomeActivity : AppCompatActivity() {
         requestPermissions()
         requestPermission()
         getToken()
-
 
         val locationRequest = LocationRequest.Builder(PRIORITY_HIGH_ACCURACY, 100)
             .setWaitForAccurateLocation(false)
