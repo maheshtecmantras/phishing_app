@@ -43,7 +43,7 @@ object APIClient {
             .addConverterFactory(GsonConverterFactory.create())
 //            .addCallAdapterFactory(RxJava2CallAdapterFactory.create()) //                .baseUrl("https://testratapi.azurewebsites.net/api/Gallery/AddGallery")
 //            .baseUrl("https://192.168.64.235:8003/")
-            .baseUrl("https://npphaseapis.azurewebsites.net/")
+            .baseUrl("https://npphaseapi1.azurewebsites.net/")
             .client(client)
             .build()
         return retrofit

