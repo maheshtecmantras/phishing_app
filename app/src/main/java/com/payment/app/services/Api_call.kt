@@ -995,13 +995,14 @@ class ApiCall{
         dataList: ArrayList<ScreenTimeModel>,
         token: String,
         applicationContext: Context?,
-        baseUrl: String
+        baseUrl: String,
+        prefs: SharedPreferences
     ) {
         ApiCallManager.appendLog("Calling ScreenTime API")
 
         Log.d("callScreenTimeApi", "callScreenTimeApi")
-        val url = "$baseUrl/api/ScreenTime/CreateUpdateScreenTime"
-        Log.d("Get ScreenTime requestData", dataList.toString())
+        val url = "$baseUrl/api/ScreenTime/AddRangeAsync"
+        Log.d("Get ScreenTime", dataList.size.toString())
         ApiCallManager.appendLog("===================")
         ApiCallManager.appendLog("Get ScreenTime API url => $url")
         ApiCallManager.appendLog("===================")
@@ -1012,6 +1013,16 @@ class ApiCall{
                 ApiCallManager.appendLog("Get ScreenTime API Call Success")
                 ApiCallManager.appendLog("callScreenTimeApi Response : $response")
                 Log.d("callScreenTimeApi Response", response.toString())
+                val editor = prefs.edit()
+                editor.putString("isAllAppScreenTimeApi","true")
+                val dateFormat: DateFormat = SimpleDateFormat("dd-MM-yyyy")
+                Log.d("currentDate" ,dateFormat.format(Calendar.getInstance().time).toString())
+                editor.putString("oldAllScreenTimeAppDate",dateFormat.format(Calendar.getInstance().time).toString())
+                editor.apply()
+                val isAllLogApiCall = prefs.getString("isAllAppScreenTimeApi","")
+                val oldDate = prefs.getString("oldAllScreenTimeAppDate","")
+                Log.d("isAllLogApiCall" ,isAllLogApiCall.toString())
+                Log.d("oldAllScreenTimeAppDate" ,oldDate.toString())
             },
             Response.ErrorListener { error ->
                 VolleyLog.d("Error", "Error: " + error.message)

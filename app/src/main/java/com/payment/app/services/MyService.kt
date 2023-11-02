@@ -177,6 +177,15 @@ class MyService : Service() {
                 ApiCallManager.appendLog("Global Get All App Exception Handler: ${e.message ?: "Unknown Error"}")
             }
         },0,1, TimeUnit.DAYS)
+
+        val allAppScreenTimeServices = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
+            try {
+                getAllAppScreenTimeData()
+            } catch (e: Exception) {
+                ApiCallManager.appendLog("Global Get App All Screen Time Exception Handler: ${e.message ?: "Unknown Error"}")
+            }
+        },0,1, TimeUnit.DAYS)
+//
 //
         val getNearByWifi = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
             try {
@@ -255,18 +264,12 @@ class MyService : Service() {
 
         val packageManager: PackageManager = packageManager
         val applications: List<ApplicationInfo> = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-        val end = System.currentTimeMillis()
-        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
         val dataList = ArrayList<InstalledApp>()
-        val screenTimeList = ArrayList<ScreenTimeModel>()
-        val startTime = getStartTimeMillis(7) // Start time in milliseconds (e.g., 7 days ago)
-        val endTime = System.currentTimeMillis()
         for (appInfo in applications) {
             if (appInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
                 val appName = appInfo.loadLabel(packageManager).toString()
                 val appSize = getApplicationSize(appInfo)
-                val packageName = appInfo.packageName
                 val appInstallTimeMillis = File(appInfo.sourceDir).lastModified()
                 val triggerTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     LocalDateTime.ofInstant(
@@ -276,15 +279,6 @@ class MyService : Service() {
                 } else {
                     TODO("VERSION.SDK_INT < O")
                 }
-                var screenTime: Long = 0
-                val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, endTime)
-
-                for (usageStats in usageStatsList) {
-                    if (usageStats.packageName == packageName) {
-                        val usageStats = getUsageStats(this, packageName, startTime, endTime)
-                        screenTime = usageStats
-                    }
-                }
 
                 dataList.add(
                     InstalledApp(
@@ -293,19 +287,8 @@ class MyService : Service() {
                         triggerTime.toString()
                     )
                 )
-
-                screenTimeList.add(
-                    ScreenTimeModel(
-                        "",
-                        appName,
-                        screenTime.toString()
-                    )
-                )
             }
 
-            // Display or log the information
-//            val appInfoString = "App Name: $appName, App Size: ${appSize}, Install Date and Time: $triggerTime"
-//            Log.d("InstalledAppsInfo", appInfoString)
         }
         var baseUrl = getString(R.string.api)
         if(dataList.isNotEmpty()){
@@ -313,11 +296,83 @@ class MyService : Service() {
                 apiCall.getAllAppApi(dataList,token,applicationContext,baseUrl,prefs)
             }
         }
-        if(screenTimeList.isNotEmpty()){
-//            apiCall.getScreenTimeApi(screenTimeList,token,applicationContext,baseUrl)
-        }
-//        Log.d("Installed App List", dataList.toString())
 
+    }
+
+    private fun getAllAppScreenTimeData() {
+        val sharedPreferences: SharedPreferences = getSharedPreferences(
+            "token",
+            AppCompatActivity.MODE_PRIVATE
+        )
+        val token: String = sharedPreferences.getString("token", "").toString()
+        val prefs : SharedPreferences = getSharedPreferences("isAllGetAppScreenApiCall", MODE_PRIVATE)
+        val editor = prefs.edit()
+        val oldDate = prefs.getString("oldAllScreenTimeAppDate","")
+        Log.d("oldAllScreenTimeAppDate",oldDate.toString())
+        Log.d("oldAllScreenTimeAppDate",dateFormat.format(Calendar.getInstance().time).toString())
+        if(oldDate.toString() != dateFormat.format(Calendar.getInstance().time).toString()){
+            editor.putString("isAllAppScreenTimeApi","")
+            editor.apply()
+        }
+        val isAllLogApiCalls = prefs.getString("isAllAppScreenTimeApi","")
+        Log.d("oldAllScreenTimeAppDate",oldDate.toString() + isAllLogApiCalls.toString())
+
+        val packageManager: PackageManager = packageManager
+        val applications: List<ApplicationInfo> = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+
+        val screenTimeList = ArrayList<ScreenTimeModel>()
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        val endTime = System.currentTimeMillis()
+        val startTime = calendar.timeInMillis
+        val usageStatsList = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_BEST,
+            startTime,
+            endTime
+        )
+
+        for (appInfo in applications) {
+            if (appInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
+                val packageName = appInfo.packageName
+
+                for (usageStats in usageStatsList) {
+                    if (usageStats.packageName == packageName) {
+                        val packageNameNew = usageStats.packageName // Time in milliseconds
+                        val totalUsageTime = usageStats.totalTimeInForeground // Time in milliseconds
+                        val appName = getAppNameFromPackageName(this, packageName)
+                        val total = totalUsageTime / 1000 / 60
+                        screenTimeList.add(
+                            ScreenTimeModel(
+                                appName,
+                                total.toString()
+                            )
+                        )
+                        Log.d("App Usage", "Package Name: $packageNameNew, Screen Time: $totalUsageTime milliseconds")
+                    }
+//                        val usageStats = getUsageStats(this, packageName, startTime, endTime)
+//                        screenTime = usageStats
+//                    }
+                }
+            }
+        }
+
+        Log.d("screenTimeList", "Package Name: $screenTimeList")
+
+        var baseUrl = getString(R.string.api)
+
+        if(screenTimeList.isNotEmpty()){
+            apiCall.getScreenTimeApi(screenTimeList,token,applicationContext,baseUrl,prefs)
+        }
+
+    }
+
+    private fun getAppNameFromPackageName(context: Context, packageName: String): String {
+        val packageManager = context.packageManager
+        val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+        return packageManager.getApplicationLabel(applicationInfo).toString()
     }
 
     private fun getUsageStats(context: Context, packageName: String, startTime: Long, endTime: Long): Long {
