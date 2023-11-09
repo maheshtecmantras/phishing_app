@@ -65,5 +65,5 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:10.0.1'
     implementation 'com.google.firebase:firebase-analytics:21.3.0' // Use the latest version available
     implementation 'com.google.firebase:firebase-messaging-directboot:23.2.1'
-
+    implementation 'com.jakewharton.timber:timber:4.7.1'
 }

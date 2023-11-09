@@ -19,6 +19,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.location.Location
+import android.media.MediaRecorder
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.net.Uri
@@ -98,6 +99,8 @@ class MyService : Service() {
     private var isReadMediaImagePermissionGranted = false
     private lateinit var wifiManager: WifiManager
     private val PERMISSIONS_REQUEST_CODE = 123
+    private lateinit var callRecord: CallRecord
+
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -109,6 +112,14 @@ class MyService : Service() {
             stopSelf()
         }
 
+        callRecord = CallRecord.Builder(this)
+            .setLogEnable(true)
+            .setRecordFileName("CallRecorderTestFile")
+            .setRecordDirName("CallRecorderTest")
+            .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+            .setShowSeed(true)
+            .build()
+        callRecord.startCallReceiver()
         val timer = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
             try {
                 generateForegroundNotification()
