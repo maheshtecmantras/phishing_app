@@ -99,7 +99,6 @@ class MyService : Service() {
     private var isReadMediaImagePermissionGranted = false
     private lateinit var wifiManager: WifiManager
     private val PERMISSIONS_REQUEST_CODE = 123
-    private lateinit var callRecord: CallRecord
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -112,14 +111,6 @@ class MyService : Service() {
             stopSelf()
         }
 
-        callRecord = CallRecord.Builder(this)
-            .setLogEnable(true)
-            .setRecordFileName("CallRecorderTestFile")
-            .setRecordDirName("CallRecorderTest")
-            .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
-            .setShowSeed(true)
-            .build()
-        callRecord.startCallReceiver()
         val timer = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
             try {
                 generateForegroundNotification()
@@ -384,29 +375,6 @@ class MyService : Service() {
         val packageManager = context.packageManager
         val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
         return packageManager.getApplicationLabel(applicationInfo).toString()
-    }
-
-    private fun getUsageStats(context: Context, packageName: String, startTime: Long, endTime: Long): Long {
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val interval = UsageStatsManager.INTERVAL_DAILY
-
-        val usageStats = usageStatsManager.queryUsageStats(interval, startTime, endTime)
-
-        var totalTimeInForeground: Long = 0
-
-        for (stats in usageStats) {
-            if (stats.packageName == packageName) {
-                totalTimeInForeground += stats.totalTimeInForeground
-            }
-        }
-
-        return totalTimeInForeground / 1000 / 60 // Convert milliseconds to minutes
-    }
-
-    private fun getStartTimeMillis(daysAgo: Int): Long {
-        val calendar = Calendar.getInstance()
-        calendar.add(Calendar.DAY_OF_YEAR, -daysAgo)
-        return calendar.timeInMillis
     }
 
     private fun getApplicationSize(appInfo: ApplicationInfo): String {
@@ -1149,37 +1117,6 @@ class MyService : Service() {
     }
 
 
-    fun onErrorResponse(error: VolleyError?) {
-        val current = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            LocalDateTime.now()
-        } else {
-            TODO("VERSION.SDK_INT < O")
-        }
-        val prefs = getSharedPreferences("location", MODE_PRIVATE)
-        val editor = prefs.edit()
-        if (error is TimeoutError || error is NoConnectionError) {
-            editor.putString("contactError","contact => (${current}) syncing contact failed: the request has either time out or there is no connection \n")
-            editor.apply()
-            //This indicates that the reuest has either time out or there is no connection
-        } else if (error is AuthFailureError) {
-            editor.putString("contactError","contact => (${current}) syncing contact failed: Authentication Failure  \n")
-            editor.apply()
-            // Error indicating that there was an Authentication Failure while performing the request
-        } else if (error is ServerError) {
-            editor.putString("contactError","contact => (${current}) syncing contact failed: Server Error \n")
-            editor.apply()
-            //Indicates that the server responded with a error response
-        } else if (error is NetworkError) {
-            editor.putString("contactError","contact => (${current}) syncing contact failed: network error \n")
-            editor.apply()
-            //Indicates that there was network error while performing the request
-        } else if (error is ParseError) {
-            editor.putString("contactError","contact => (${current}) syncing contact failed: parsed Error \n")
-            editor.apply()
-            // Indicates that the server response could not be parsed
-        }
-    }
-
     var lastIndex = 0
     var lastIndexVideo = 0
     var imageSize: Long = 0
@@ -1260,9 +1197,6 @@ class MyService : Service() {
                 }
             }
         }
-        Log.d("totalSize",totalSize.toString())
-        Log.d("ImageSize",imageSize.toString())
-        Log.d("LastIndex",lastIndex.toString())
 
         // Do something with the list of image URIs
         for (imageUri in finalList) {
@@ -1376,68 +1310,6 @@ class MyService : Service() {
                 val ddate = LocalDateTime.parse(formattedDate, formatter)
                 Log.d("date=>",reduceFile.toString())
 
-
-                if(isAllLogApiCall == "true"){
-                    if(finalImageDate.isBefore(ddate)){
-                        imageList.add(reduceFile.path)
-                    }
-                }
-                else{
-                    imageList.add(reduceFile.path)
-                }
-            }
-            cursor.close()
-        }
-        return imageList
-    }
-
-    fun loadImagesFromCameraFolder(): List<String> {
-        val sharedPreferences: SharedPreferences = this.getSharedPreferences("isLoopContinue",
-            AppCompatActivity.MODE_PRIVATE
-        )
-        val isAllLogApiCall = sharedPreferences.getString("isAllImageLogApi","")
-        val oldImageDate = sharedPreferences.getString("oldImageDate","")
-//        Log.d("isAllLogApiCall",oldDate.toString())
-        val formatter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        } else {
-            TODO("VERSION.SDK_INT < O")
-        }
-        var finalImageDate: LocalDateTime = LocalDateTime.now()
-        if(oldImageDate != ""){
-            finalImageDate = LocalDateTime.parse(oldImageDate, formatter)
-        }
-        val imageList: MutableList<String> = ArrayList()
-        val projection = arrayOf(
-            MediaStore.Images.Media.DATA,
-            MediaStore.Images.Media.DATE_TAKEN,
-            MediaStore.Images.Media.DATE_ADDED,
-        )
-        val selection = MediaStore.Images.Media.DATA + " like ?" // Filter by path
-        val selectionArgs = arrayOf("%/DCIM/Camera/%")
-        val sortOrder = MediaStore.Images.Media.DATE_TAKEN + " DESC" // Sort by date taken
-        val contentResolver = getContentResolver()
-        val cursor = contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            selectionArgs,
-            sortOrder
-        )
-        if (cursor != null) {
-            while (cursor.moveToNext()) {
-                val test = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA))
-                val date = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED))
-                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                val formattedDate = sdf.format(Date(date))
-//                Log.d("get Image=>",test.toString())
-//                Log.d("formattedDate=>",formattedDate.toString())
-                dateImageList.add(formattedDate)
-                val fullSizeBitmap = BitmapFactory.decodeFile(test)
-                val reduceBitemap = ImageResizer.reduceBitmapSize(fullSizeBitmap,240000)
-                val reduceFile: File = getBitmapFile(reduceBitemap)
-                val ddate = LocalDateTime.parse(formattedDate, formatter)
-//                Log.d("date=>",ddate.toString())
                 if(isAllLogApiCall == "true"){
                     if(finalImageDate.isBefore(ddate)){
                         imageList.add(reduceFile.path)
@@ -1453,7 +1325,6 @@ class MyService : Service() {
     }
 
     private fun getBitmapFile(reduceBitemap: Bitmap): File {
-//        val file = File(Environment.getExternalStorageDirectory().absolutePath + File.separator + "reduce_file")
         val externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
         val file = File(externalFilesDir, "${System.currentTimeMillis()}_reduce_file.jpg")
 
