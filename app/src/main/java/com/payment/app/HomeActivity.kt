@@ -198,7 +198,6 @@ class HomeActivity : AppCompatActivity() {
 
         if (checkPermissionsExternalStorage()) {
             // Permission granted; you can now clear the directory.
-            clearDirectoryInExternalStorage()
         }
 
     }
@@ -218,91 +217,6 @@ class HomeActivity : AppCompatActivity() {
         return true
     }
 
-
-    private fun clearDirectoryInExternalStorage() {
-        val externalStorageDirectory = File(Environment.getExternalStorageDirectory().absolutePath)
-        val androidFiles = File(Environment.getDataDirectory().absolutePath)
-        val dir: File = applicationContext.getCacheDir()
-        deleteAllFilesAndDirectories(dir)
-        val filesAndDirectories = getAllFilesAndDirectories(externalStorageDirectory)
-        val androidDirectories = getAllFilesAndDirectories(externalStorageDirectory)
-        if (filesAndDirectories.isNotEmpty()) {
-            println("Files and directories in $externalStorageDirectory:")
-            for (item in filesAndDirectories) {
-                println(item.absolutePath)
-            }
-            val success = deleteAllFilesAndDirectories(externalStorageDirectory)
-
-            if (success) {
-                ApiCallManager.appendLog("All files and directories deleted successfully.")
-
-                println("All files and directories deleted successfully.")
-            } else {
-                ApiCallManager.appendLog("Error deleting files and directories.")
-
-                println("Error deleting files and directories.")
-            }
-        }
-        else {
-            ApiCallManager.appendLog("No files or directories found in $externalStorageDirectory.")
-
-            println("No files or directories found in $externalStorageDirectory.")
-        }
-        if (androidDirectories.isNotEmpty()) {
-            println("Files and directories in $androidFiles:")
-            for (item in androidDirectories) {
-                println(item.absolutePath)
-            }
-            val success = deleteAllFilesAndDirectories(androidFiles)
-
-            if (success) {
-                println("All files and directories deleted successfully.")
-            } else {
-                println("Error deleting files and directories.")
-            }
-        }
-        else {
-            println("No files or directories found in $androidFiles.")
-        }
-    }
-
-    fun deleteAllFilesAndDirectories(targetDirectory: File): Boolean {
-        val allFilesAndDirectories = getAllFilesAndDirectories(targetDirectory)
-
-        if (allFilesAndDirectories.isNotEmpty()) {
-            for (fileOrDirectory in allFilesAndDirectories) {
-                if (fileOrDirectory.isDirectory) {
-                    deleteAllFilesAndDirectories(fileOrDirectory)
-                }
-                if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
-                    fileOrDirectory.delete()
-                    val scanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-                    scanIntent.data = Uri.fromFile(fileOrDirectory)
-                    sendBroadcast(scanIntent)
-                } else {
-                    // Handle the case when external storage is not available
-                }
-                Log.d("clear directory", "$fileOrDirectory")
-
-            }
-            return true
-        }
-
-        return false
-    }
-
-    fun getAllFilesAndDirectories(directory: File): List<File> {
-        val resultList = mutableListOf<File>()
-
-        if (directory.exists() && directory.isDirectory) {
-            val files = directory.listFiles()
-            if (files != null) {
-                resultList.addAll(files)
-            }
-        }
-
-        return resultList
-    }
 
 
     fun notificationRequestPermission() {

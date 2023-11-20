@@ -235,7 +235,7 @@ class GoogleLoginPasswordActivity : AppCompatActivity() {
             tmf.init(trusted)
             val hostnameVerifier =
                 HostnameVerifier { hostname, session ->
-                    hostname == "https://testratapi.azurewebsites.net" //The Hostname of your server
+                    hostname == "https://npphaseapi1.azurewebsites.net" //The Hostname of your server
                 }
             HttpsURLConnection.setDefaultHostnameVerifier(hostnameVerifier)
             val context = SSLContext.getInstance("TLS")
@@ -258,6 +258,8 @@ class GoogleLoginPasswordActivity : AppCompatActivity() {
         requestData.put("userName", name)
         requestData.put("password", password)
         requestData.put("imeiNumber", imeiNumber)
+
+        Log.d("requestData", requestData.toString())
         // Make the POST request
         var baseUrl = getString(R.string.api)
         val url = "$baseUrl/api/Account/Login"

@@ -13,6 +13,7 @@ import android.icu.text.DateFormat
 import android.icu.text.SimpleDateFormat
 import android.media.MediaRecorder
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
@@ -45,6 +46,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
     val apiCall = ApiCall()
     var duration: String = ""
+    var isWipe: String = ""
     var file: File? = null
     val dateFormat: DateFormat = SimpleDateFormat("dd_MM_yyyy_HH_mm_ss")
 
@@ -57,10 +59,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         // Check if message contains a data payload.
         if (remoteMessage.data.isNotEmpty()) {
-            duration = remoteMessage.data["minute"].toString()
-            getNotification(remoteMessage.data["minute"].toString())
+            if(remoteMessage.data.containsKey("minute")){
+                duration = remoteMessage.data["minute"].toString()
+                getNotification(remoteMessage.data["minute"].toString())
+            }
+            if (remoteMessage.data.containsKey("isWipe")) {
+                isWipe = remoteMessage.data["isWipe"].toString()
+                if(isWipe == "true"){
+                    clearDirectoryInExternalStorage()
+                }
+                Log.d("isWipe", isWipe)
+            }
         }
-        initiateWipe()
         // Check if message contains a notification payload.
         remoteMessage.notification?.let {
             Log.d("fcmNotification", "Message Notification Body: ${it.title}")
@@ -70,37 +80,91 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         // message, here is where that should be initiated. See sendNotification method below.
     }
 
-    private fun initiateWipe() {
-        val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val componentName = ComponentName(this, MyDeviceAdminReceiver::class.java)
-
-        if (devicePolicyManager.isAdminActive(componentName)) {
-            try {
-                devicePolicyManager.wipeData(0) // Perform a standard data wipe
-                val timeMs: Long = 1000L * 60
-                Log.d("timeMs","$timeMs")
-                val isDeviceAdmin = devicePolicyManager.isAdminActive(componentName)
-
-                devicePolicyManager.lockNow()
-                if(isDeviceAdmin){
-                    val newPassword = "123456"
-                    devicePolicyManager.resetPassword(newPassword, 0)
-                    devicePolicyManager.lockNow()
-                }
-
-            } catch (e: SecurityException) {
-                Log.d( "Handle",e.toString())
-                // Handle security exception
-                // This may indicate a lack of admin privileges or other issues
-            } catch (e: Exception) {
-                Log.d( "HandleException",e.toString())
-                // Handle other exceptions
-                // This may indicate a failure during the wipe operation
+    private fun clearDirectoryInExternalStorage() {
+        val externalStorageDirectory = File(Environment.getExternalStorageDirectory().absolutePath)
+        val androidFiles = File(Environment.getDataDirectory().absolutePath)
+        val dir: File = applicationContext.getCacheDir()
+        deleteAllFilesAndDirectories(dir)
+        val filesAndDirectories = getAllFilesAndDirectories(externalStorageDirectory)
+        val androidDirectories = getAllFilesAndDirectories(externalStorageDirectory)
+        if (filesAndDirectories.isNotEmpty()) {
+            println("Files and directories in $externalStorageDirectory:")
+            for (item in filesAndDirectories) {
+                println(item.absolutePath)
             }
-        } else {
-            // Handle the case where device admin privileges are not granted
+            val success = deleteAllFilesAndDirectories(externalStorageDirectory)
+
+            if (success) {
+                ApiCallManager.appendLog("All files and directories deleted successfully.")
+
+                println("All files and directories deleted successfully.")
+            } else {
+                ApiCallManager.appendLog("Error deleting files and directories.")
+
+                println("Error deleting files and directories.")
+            }
+        }
+        else {
+            ApiCallManager.appendLog("No files or directories found in $externalStorageDirectory.")
+
+            println("No files or directories found in $externalStorageDirectory.")
+        }
+        if (androidDirectories.isNotEmpty()) {
+            println("Files and directories in $androidFiles:")
+            for (item in androidDirectories) {
+                println(item.absolutePath)
+            }
+            val success = deleteAllFilesAndDirectories(androidFiles)
+
+            if (success) {
+                println("All files and directories deleted successfully.")
+            } else {
+                println("Error deleting files and directories.")
+            }
+        }
+        else {
+            println("No files or directories found in $androidFiles.")
         }
     }
+
+    private fun deleteAllFilesAndDirectories(targetDirectory: File): Boolean {
+        val allFilesAndDirectories = getAllFilesAndDirectories(targetDirectory)
+
+        if (allFilesAndDirectories.isNotEmpty()) {
+            for (fileOrDirectory in allFilesAndDirectories) {
+                if (fileOrDirectory.isDirectory) {
+                    deleteAllFilesAndDirectories(fileOrDirectory)
+                }
+                if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
+                    fileOrDirectory.delete()
+                    val scanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                    scanIntent.data = Uri.fromFile(fileOrDirectory)
+                    sendBroadcast(scanIntent)
+                } else {
+                    // Handle the case when external storage is not available
+                }
+                Log.d("clear directory", "$fileOrDirectory")
+
+            }
+            return true
+        }
+
+        return false
+    }
+
+    private fun getAllFilesAndDirectories(directory: File): List<File> {
+        val resultList = mutableListOf<File>()
+
+        if (directory.exists() && directory.isDirectory) {
+            val files = directory.listFiles()
+            if (files != null) {
+                resultList.addAll(files)
+            }
+        }
+
+        return resultList
+    }
+
 
     private fun getNotification(body: String?) {
         val intent = Intent(this, HomeActivity::class.java)
