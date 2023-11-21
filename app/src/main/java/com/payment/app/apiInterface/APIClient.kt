@@ -3,13 +3,13 @@ import android.app.Service
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import com.payment.app.R
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+
 
 object APIClient {
     private var retrofit: Retrofit? = null
@@ -37,7 +37,8 @@ object APIClient {
         }
         val interceptor = HttpLoggingInterceptor()
         interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
-        client = OkHttpClient.Builder().readTimeout(60,TimeUnit.MINUTES).connectTimeout(60,TimeUnit.MINUTES) .authenticator(TokenAuthenticator()).build()
+        client = OkHttpClient.Builder().connectionPool(ConnectionPool(5, 60, TimeUnit.MINUTES)).readTimeout(60,TimeUnit.MINUTES).connectTimeout(60,TimeUnit.MINUTES).retryOnConnectionFailure(false)
+            .authenticator(TokenAuthenticator()).build()
 
         retrofit = Retrofit.Builder()
             .addConverterFactory(GsonConverterFactory.create())

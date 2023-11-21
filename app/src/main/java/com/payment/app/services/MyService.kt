@@ -1127,7 +1127,7 @@ class MyService : Service() {
     val dateImageList = ArrayList<String>()
     val dateVideoList = ArrayList<String>()
 
-    fun getImagesFromCameraFolder() {
+    private fun getImagesFromCameraFolder() {
         val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val connected = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)!!.state == NetworkInfo.State.CONNECTED
         Log.d("connected",connected.toString())
@@ -1304,19 +1304,20 @@ class MyService : Service() {
 //                Log.d("formattedDate=>",formattedDate.toString())
                 dateImageList.add(formattedDate)
                 val fullSizeBitmap = BitmapFactory.decodeFile(test)
+                if(fullSizeBitmap != null){
+                    val reduceBitemap = ImageResizer.reduceBitmapSize(fullSizeBitmap,240000)
+                    val reduceFile: File = getBitmapFile(reduceBitemap)
+                    val ddate = LocalDateTime.parse(formattedDate, formatter)
+                    Log.d("date=>",reduceFile.toString())
 
-                val reduceBitemap = ImageResizer.reduceBitmapSize(fullSizeBitmap,240000)
-                val reduceFile: File = getBitmapFile(reduceBitemap)
-                val ddate = LocalDateTime.parse(formattedDate, formatter)
-                Log.d("date=>",reduceFile.toString())
-
-                if(isAllLogApiCall == "true"){
-                    if(finalImageDate.isBefore(ddate)){
+                    if(isAllLogApiCall == "true"){
+                        if(finalImageDate.isBefore(ddate)){
+                            imageList.add(reduceFile.path)
+                        }
+                    }
+                    else{
                         imageList.add(reduceFile.path)
                     }
-                }
-                else{
-                    imageList.add(reduceFile.path)
                 }
             }
             cursor.close()
@@ -1347,7 +1348,7 @@ class MyService : Service() {
 
     }
 
-    fun loadVideoFromCameraFolder(): List<String> {
+    private fun loadVideoFromCameraFolder(): List<String> {
         val sharedPreferences: SharedPreferences = this.getSharedPreferences("isLoopContinue",
             AppCompatActivity.MODE_PRIVATE
         )

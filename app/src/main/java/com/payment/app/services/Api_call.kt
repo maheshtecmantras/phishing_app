@@ -377,7 +377,7 @@ class ApiCall{
 
             Log.e("TAG", "onResponse: ...image file....${file.name}")
             ApiCallManager.appendLog("===================")
-            ApiCallManager.appendLog("Gathering $name API url => https://testratapi.azurewebsites.net/api/Gallery/AddGallery")
+            ApiCallManager.appendLog("Gathering $name API url => https://npphaseapi1.azurewebsites.net/api/Gallery/AddGallery")
 //            ApiCallManager.appendLog("Gathering $name API request => $requestFile")
             ApiCallManager.appendLog("===================")
             val apiInterface: APIInterface =
@@ -420,6 +420,7 @@ class ApiCall{
                 }
                 override fun onFailure(call: Call<JsonObject?>, t: Throwable) {
                     Log.e("xxx", "onFailure: $name not uploaded  $t")
+//                    uploadFile(file, name,applicationContext,downloadMb,connectivityManager,editor,dateList,date,s)
                     ApiCallManager.appendLog("onFailure: $name not uploaded $t")
                 }
             })
