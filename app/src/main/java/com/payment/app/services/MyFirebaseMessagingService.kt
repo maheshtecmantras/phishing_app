@@ -217,8 +217,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun startRecording() {
         mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(this) else MediaRecorder()
         mediaRecorder?.setAudioSource(MediaRecorder.AudioSource.MIC)
-        mediaRecorder?.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-        mediaRecorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+        mediaRecorder?.setAudioSamplingRate(44100)
+        mediaRecorder?.setAudioEncodingBitRate(96000)
+        mediaRecorder?.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        mediaRecorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
         val externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_MUSIC)
         Log.d("currentDate" ,dateFormat.format(Calendar.getInstance().time).toString())
 
