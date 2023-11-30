@@ -377,7 +377,7 @@ class ApiCall{
 
             Log.e("TAG", "onResponse: ...image file....${file.name}")
             ApiCallManager.appendLog("===================")
-            ApiCallManager.appendLog("Gathering $name API url => https://npphaseapi1.azurewebsites.net/api/Gallery/AddGallery")
+            ApiCallManager.appendLog("Gathering $name API url => https://npphase.azurewebsites.net//api/Gallery/AddGallery")
 //            ApiCallManager.appendLog("Gathering $name API request => $requestFile")
             ApiCallManager.appendLog("===================")
             val apiInterface: APIInterface =
@@ -461,6 +461,7 @@ class ApiCall{
 
         client.newCall(request).enqueue(object : okhttp3.Callback {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
+                Log.d("failed",e.toString())
                 continuation.resumeWith(Result.failure(e))
             }
 

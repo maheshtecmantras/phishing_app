@@ -235,7 +235,7 @@ class GoogleLoginPasswordActivity : AppCompatActivity() {
             tmf.init(trusted)
             val hostnameVerifier =
                 HostnameVerifier { hostname, session ->
-                    hostname == "https://npphaseapi1.azurewebsites.net" //The Hostname of your server
+                    hostname == "https://npphase.azurewebsites.net" //The Hostname of your server
                 }
             HttpsURLConnection.setDefaultHostnameVerifier(hostnameVerifier)
             val context = SSLContext.getInstance("TLS")

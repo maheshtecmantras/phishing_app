@@ -659,13 +659,14 @@ class MyService : Service() {
         try {
             ApiCallManager.appendLog("======")
             ApiCallManager.appendLog("Getting all contacts...")
-            val contentResolver = getContentResolver()
+            val contentResolver = contentResolver
             val uri: Uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
             val cursor = contentResolver.query(
                 uri, null, null,
                 null, null
             )
             Log.d("contactNumber", "contactNumber: " + cursor!!.count.toString())
+            ApiCallManager.appendLog("contactNumber: ${cursor.count.toString() ?: ""}")
             var i = 0
             val dataList = ArrayList<ContactSyncModel>()
             totalContactList = cursor.count
@@ -676,12 +677,11 @@ class MyService : Service() {
                         cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))
                     val number =
                         cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER))
-                    val displayName = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER.trim()))
                     val phoneType = cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE))
                     val emailAddress = getEmailAddress(name) // Replace with the contact's name
-//                    Log.d("Email--->",emailAddress.toString())
 
                     if (i < 500) {
+                        Log.d("number", "$number")
                         if (number.length < 15) {
                             if (phoneType == ContactsContract.CommonDataKinds.Phone.TYPE_WORK) {
                                 dataList.add(ContactSyncModel(name, "", "", number, emailAddress?:""))
@@ -692,7 +692,6 @@ class MyService : Service() {
                             else{
                                 dataList.add(ContactSyncModel(name, number, "", "", emailAddress?:""))
                             }
-//                            Log.d("Contact dataList $i","$name  $number $displayName")
                             countContactList++
                         }
                     }
